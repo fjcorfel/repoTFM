@@ -13,7 +13,7 @@ splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 # Read all the annotated trees -> list[tibble]
-tree_files <- list.files(path = "./data/annotated_trees",
+tree_files <- list.files(path = ".",
                          pattern = "\\.nexus$",
                          full.names = TRUE)
 
@@ -21,9 +21,6 @@ annotated_trees <- lapply(tree_files, function(tree_file){
   tree <- treeio::read.beast(tree_file)
   treeio::as_tibble(tree)
 })
-
-
-
 
 # Function to modify each mutation
 
