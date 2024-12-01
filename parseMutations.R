@@ -8,7 +8,7 @@ library(data.table)
 # parallel --link Rscript parseMutations.R ::: $(ls data/annotated_trees) ::: {1..3}
 
 # Read SNP table -> df
-snp_table <- fread("./data/SNP_table_noresis.txt")
+#snp_table <- fread("./data/SNP_table_noresis.txt")
 
 # Read splits -> vector
 splits <- readLines("./data/mysplits.txt")
@@ -16,10 +16,12 @@ splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 # Read annotated tree -> tibble
+# Command Line
 args <- commandArgs(trailingOnly = TRUE)
 tree_file <- args[1]
 tree_number <- as.numeric(args[2])
 
+# Manual input
 #tree_file <- "./data/annotated_trees/annotated_tree_002.nexus"
 #tree_number <- 2
 
@@ -28,7 +30,6 @@ tree <- treeio::as_tibble(tree)
 
 
 # Function to modify each mutation
-
 modify_mutation <- function(mutation, increment){
   
   # Extract mutation components using regex
@@ -41,9 +42,8 @@ modify_mutation <- function(mutation, increment){
   
 }
 
-
-  
-if (tree_number != 0) {
+# First tree doesn't need modifications
+if (tree_number != 1) {
   
   for (mut_idx in seq_along(tree$mutations)){
     mutations <- tree$mutations[[mut_idx]]
@@ -58,8 +58,8 @@ if (tree_number != 0) {
       tree$mutations[[mut_idx]] <- unname(new_mutations)
       
       # Debugging
-      print(paste0(mutations, " -> ", new_mutations))
+      #print(paste0(mutations, " -> ", new_mutations))
+    }
   }
 }
-  }
 
