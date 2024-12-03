@@ -5,7 +5,7 @@ library(stringr)
 library(data.table)
 
 # Ejecutar desde ancestral_results/
-# parallel --link Rscript parseMutations.R ::: run_alignment_no_resis.*/annotated_tree.nexus ::: {1..200}
+# parallel --link Rscript parseMutations.R ::: ancestral_results/run_alignment_no_resis.*/annotated_tree.nexus ::: {1..200}
 
 # Read SNP table -> df
 snp_table <- fread("../data/SNP_table_noresis.txt")
