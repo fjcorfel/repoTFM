@@ -8,10 +8,10 @@ library(data.table)
 # parallel --link Rscript parseMutations.R ::: $(ls data/annotated_trees) ::: {1..3}
 
 # Read SNP table -> df
-#snp_table <- fread("./data/SNP_table_noresis.txt")
+snp_table <- fread("../data/SNP_table_noresis.txt")
 
 # Read splits -> vector
-splits <- readLines("./data/mysplits.txt")
+splits <- readLines("../data/mysplits.txt")
 splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
@@ -22,8 +22,8 @@ tree_file <- args[1]
 tree_number <- as.numeric(args[2])
 
 # Manual input
-#tree_file <- "./data/annotated_trees/annotated_tree_002.nexus"
-#tree_number <- 2
+# tree_file <- "../data/run_alignment_no_resis.002.nexus"
+# tree_number <- 2
 
 tree <- treeio::read.beast(tree_file)
 tree <- treeio::as_tibble(tree)
@@ -57,9 +57,13 @@ if (tree_number != 1) {
       
       tree$mutations[[mut_idx]] <- unname(new_mutations)
       
-      # Debugging
-      #print(paste0(mutations, " -> ", new_mutations))
+      
     }
   }
 }
+
+# Buscar la posición de la mutación (tree$mutations)
+# Buscar esa posición en la SNP table (número de fila)
+# Colocar en la mutación la posición de la referencia -> Coger snp_table$position de la fila correspondiente
+
 
