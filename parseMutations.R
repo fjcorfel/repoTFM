@@ -4,22 +4,22 @@ library(dplyr)
 library(stringr)
 library(data.table)
 
-# Habría que adaptar la ejecución para los 200 árboles...
-# parallel --link Rscript parseMutations.R ::: $(ls data/annotated_trees) ::: {1..3}
+# Ejecutar desde ancestral_results/
+# parallel --link Rscript parseMutations.R ::: run_alignment_no_resis.*/annotated_tree.nexus ::: {1..200}
 
 # Read SNP table -> df
 snp_table <- fread("../data/SNP_table_noresis.txt")
 
 # Read splits -> vector
-splits <- readLines("../data/mysplits.txt")
+splits <- readLines("../splitalignment/mysplits.txt")
 splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 # Read annotated tree -> tibble
 # Command Line
-#args <- commandArgs(trailingOnly = TRUE)
-#tree_file <- args[1]
-#tree_number <- as.numeric(args[2])
+args <- commandArgs(trailingOnly = TRUE)
+tree_file <- args[1]
+tree_number <- as.numeric(args[2])
 
 # Manual input
 # tree_file <- "../data/annotated_trees/run_alignment_no_resis.002.nexus"
@@ -100,5 +100,9 @@ for (mut_idx in seq_along(tree$mutations)) {
   }
 }
 
-
+# Write annotated tree tables
+write.table(tree, file = paste0("parsing_results/annotated_tree_", tree_number, ".txt"),
+            sep = "\t",
+            row.names = FALSE,
+            quote = FALSE)
 
