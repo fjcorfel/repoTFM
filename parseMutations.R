@@ -17,13 +17,13 @@ splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 # Read annotated tree -> tibble
 # Command Line
-args <- commandArgs(trailingOnly = TRUE)
-tree_file <- args[1]
-tree_number <- as.numeric(args[2])
+#args <- commandArgs(trailingOnly = TRUE)
+# tree_file <- args[1]
+# tree_number <- as.numeric(args[2])
 
 # Manual input
-# tree_file <- "../data/annotated_trees/run_alignment_no_resis.002.nexus"
-# tree_number <- 2
+tree_file <- "../data/run_alignment_no_resis.002.nexus"
+tree_number <- 2
 
 tree <- treeio::read.beast(tree_file)
 tree <- treeio::as_tibble(tree)
@@ -99,6 +99,11 @@ for (mut_idx in seq_along(tree$mutations)) {
     tree$ref_positions[[mut_idx]] <- unname(ref_positions)
   }
 }
+
+# Convert columns to compatible format
+tree$ref_positions <- sapply(tree$ref_positions, function(x) paste(x, collapse = ","))
+tree$mutations <- sapply(tree$mutations, function(x) paste(x, collapse = ","))
+
 
 # Write annotated tree tables
 write.table(tree, file = paste0("parsing_results/annotated_tree_", tree_number, ".txt"),
