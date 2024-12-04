@@ -1,7 +1,7 @@
 library(dplyr)
 library(tidyr)
 
-# Ejecutar en parsing_results
+# Ejecutar en parsing_results/
 files <- list.files(path = ".", pattern = "\\.txt$", full.names = TRUE)
 
 # Function to read table in correct format
@@ -22,7 +22,6 @@ combined_tables <- Reduce(function(x, y){
 }, all_tables)
 
 # Combine mutations and positions
-
 combined_result <- combined_tables %>%
   rowwise() %>%
   mutate(
@@ -35,5 +34,17 @@ combined_result <- combined_tables %>%
 
 combined_result <- as_tibble(combined_result)
 
+# Write result table
 write.table(combined_result, "annotated_mutations.txt", sep = "\t",
             row.names = FALSE, quote = FALSE)
+
+# Store result in R object
+combined_result$mutations <- strsplit(combined_result$mutations, "/")
+combined_result$ref_positions <- strsplit(combined_result$ref_positions, "/")
+combined_result <- combined_result %>%
+  mutate(
+    mutations = lapply(mutations, function(x) if (length(x) == 0) NULL else x),
+    ref_positions = lapply(ref_positions, function(x) if (length(x) == 0) NULL else x)
+  )
+
+save(combined_result, file = "annotated_mutations.Rda")
