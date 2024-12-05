@@ -44,7 +44,8 @@ combined_result$ref_positions <- strsplit(combined_result$ref_positions, "/")
 combined_result <- combined_result %>%
   mutate(
     mutations = lapply(mutations, function(x) if (length(x) == 0) NULL else x),
-    ref_positions = lapply(ref_positions, function(x) if (length(x) == 0) NULL else x)
+    ref_positions = lapply(ref_positions, function(x) if (length(x) == 0) NULL else x),
+    mutation_number = lapply(mutations, length)
   )
 
 save(combined_result, file = "annotated_mutations.Rda")
