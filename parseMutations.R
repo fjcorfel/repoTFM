@@ -101,8 +101,8 @@ for (mut_idx in seq_along(tree$mutations)) {
 }
 
 # Convert columns to compatible format
-tree$ref_positions <- sapply(tree$ref_positions, function(x) paste(x, collapse = ","))
-tree$mutations <- sapply(tree$mutations, function(x) paste(x, collapse = ","))
+tree$ref_positions <- sapply(tree$ref_positions, function(x) paste(x, collapse = "/"))
+tree$mutations <- sapply(tree$mutations, function(x) paste(x, collapse = "/"))
 
 
 # Write annotated tree tables
