@@ -17,13 +17,13 @@ splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 # Read annotated tree -> tibble
 # Command Line
-#args <- commandArgs(trailingOnly = TRUE)
-# tree_file <- args[1]
-# tree_number <- as.numeric(args[2])
+args <- commandArgs(trailingOnly = TRUE)
+tree_file <- args[1]
+tree_number <- as.numeric(args[2])
 
 # Manual input
-tree_file <- "../data/run_alignment_no_resis.002.nexus"
-tree_number <- 2
+#tree_file <- "../data/run_alignment_no_resis.002.nexus"
+#tree_number <- 2
 
 tree <- treeio::read.beast(tree_file)
 tree <- treeio::as_tibble(tree)
