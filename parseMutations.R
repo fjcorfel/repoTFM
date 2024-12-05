@@ -106,7 +106,7 @@ tree$mutations <- sapply(tree$mutations, function(x) paste(x, collapse = ","))
 
 
 # Write annotated tree tables
-write.table(tree, file = paste0("parsing_results/annotated_tree_", tree_number, ".txt"),
+write.table(tree, file = paste0("parsing_results/annotated_tree.", sprintf("%03d", tree_number), ".txt"),
             sep = "\t",
             row.names = FALSE,
             quote = FALSE)
