@@ -14,66 +14,74 @@ splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
 files <- list.files("./data/ancestral_results/", pattern = "*.nexus", full.names = TRUE)
 
+# Procesar cada uno de los archivos .nexus de ancestral_results/
+result_tree <- NULL
 
-# Iterar sobre los árboles *.nexus de ancestral_results/
-for (n_file in 1:length(files)) {
-
-  # Si es el primer árbol, usar como "plantilla" y copiar -> añadir $ref_position
-  if (n_file == 1){
-    # Crear plantilla
-    result_tree <- treeio::read.beast(files[n_file])
-    result_tree <- treeio::as_tibble(result_tree)
+# Fución para procesar las mutaciones de cada nodo
+process_node_mutations <- function(node_mutations, n_file, spn_table, splits){
+  if (is.null(node_mutations)) return(list(mut = NULL, ref = NULL))
+  
+  updated_mutations <- lapply(node_mutations, function(mutation){
+    first_char <- str_extract(mutation, "^[A-Za-z-]")
+    position <- as.numeric(str_extract(mutation, "\\d+"))
+    last_char <- str_extract(mutation, "[A-Za-z-]$")
     
-    # Añadir columna ref_position
+    # Si es el primer árbol, no se aumenta la posición respecto al split
+    new_mutation <- mutation
+    if (n_file != 1){
+      position <- position + (splits[n_file])
+      new_mutation <- (paste0(first_char, position, last_char)) 
+    }
+    
+    # Obtener la posición de referencia de la mutación en la SNP_table
+    ref_position <- snp_table$Position[position]
+    
+    # Se devuelve la mutación modificada y su posición de referencia
+    list(new_mutation = new_mutation, ref_position = ref_position)
+    
+  })
+  
+  # Se devuelven todas las mutaciones modificadas y sus posiciones de referencia del nodo
+  list(
+    mut = sapply(updated_mutations, `[[`, "new_mutation"),
+    ref = sapply(updated_mutations, `[[`, "ref_position")
+    )
+  }
+
+for (n_file in seq_along(files)){
+  
+  tree <- treeio::read.beast(files[n_file])
+  tree <- treeio::as_tibble(tree)
+  
+  # Crear plantilla inicial con el primer árbol
+  if (n_file == 1) {
+    result_tree <- tree
     result_tree$ref_mutation_position <- vector("list", nrow(result_tree))
-    # Añadir columna con número de mutaciones
     result_tree$n_mutations <- vector("list", nrow(result_tree))
   }
   
-  # A partir del segundo árbol -> realizar modificaciones
-  else {
-    # Leer árbol
-    tree <- treeio::read.beast(files[n_file])
-    tree <- treeio::as_tibble(tree)
-    
-    # Extraer lista de mutaciones
-    tree_mutations_list <- tree$mutations
-    
-    # Recorrer cada uno de los nodos
-    for (n_node in 1:length(tree_mutations_list)){
-      node_mutations <- tree_mutations_list[[n_node]]
-      
-      # Si la fila no es NULL -> se hacen modificaciones
-      if (!is.null(node_mutations)){
-        
-        # Recorrer cada una de las mutaciones de cada nodo
-        for (n_mutation in 1:length(node_mutations)){
-          # Extraer elementos
-          first_char <- str_extract(node_mutations[n_mutation], "^[A-Za-z-]")
-          position <- as.numeric(str_extract(node_mutations[n_mutation], "\\d+"))
-          last_char <- str_extract(node_mutations[n_mutation], "[A-Za-z-]$")
-          
-          # Aumentar la posición respect al split
-          position <- position + (splits[n_file] - 1)
-          new_mutation <- paste0(first_char, position, last_char)
-          
-          # Extraer la posición de referencia de la mutación de la SNP_table
-          ref_position <- snp_table$Position[position]
-        
-          # Añadir vector de mutaciones y ref_positions a la plantilla (append)
-          result_tree$mutations[[n_node]] <- c(result_tree$mutations[[n_node]],
-                                             new_mutation)
-          
-          result_tree$ref_mutation_position[[n_node]] <- c(result_tree$ref_mutation_position[[n_node]],
-                                                          ref_position)
-          
-        }
-      }
-      
-      # Añadir número de mutaciones resultante a cada nodo
-      result_tree$n_mutations[[n_node]] <- length(result_tree$mutations[[n_node]])
-    }
-  }
+  # Procesar cada uno de los nodos
+  processed_nodes <- lapply(seq_along(tree$mutations), function(n_node) {
+    process_node_mutations(tree$mutations[[n_node]], n_file, snp_table, splits)
+  })
+  
+  # Actualizar columnas en result_tree
+  # Actualizar mutaciones
+  result_tree$mutations <- lapply(seq_along(processed_nodes), function(n_node) {
+    c(result_tree$mutations[[n_node]], processed_nodes[[n_node]]$mut)
+  })
+  
+  # Actulizar posiciones de referencia de las mutaciones
+  result_tree$ref_mutation_position <- lapply(seq_along(processed_nodes), function(n_node) {
+    c(result_tree$ref_mutation_position[[n_node]], processed_nodes[[n_node]]$ref)
+  })
 }
 
+# Eliminar duplicados de las mutaciones
+result_tree$mutations <- lapply(result_tree$mutations, unique)
+
+# Calcular el conteo de mutaciones después de eliminar duplicados
+result_tree$n_mutations <- sapply(result_tree$mutations, length)
+
+# Guardar el resultado final
 save(result_tree, file = "parsed_ancestral_result.rda")
