@@ -3,6 +3,7 @@ library(ape)
 library(dplyr)
 library(stringr)
 library(data.table)
+library(ggplot2)
 
 # Read SNP table -> df
 snp_table <- fread("./data/SNP_table_noresis.txt")
@@ -12,7 +13,8 @@ splits <- readLines("./data/mysplits_column.txt")
 splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
-files <- list.files("./data/ancestral_results/", pattern = "*.nexus", full.names = TRUE)
+files <- list.files("./data/ancestral_results/", pattern = "*.nexus",
+                    full.names = TRUE)
 
 # Procesar cada uno de los archivos .nexus de ancestral_results/
 result_tree <- NULL
@@ -72,8 +74,10 @@ for (n_file in seq_along(files)){
   })
   
   # Actulizar posiciones de referencia de las mutaciones
-  result_tree$ref_mutation_position <- lapply(seq_along(processed_nodes), function(n_node) {
-    c(result_tree$ref_mutation_position[[n_node]], processed_nodes[[n_node]]$ref)
+  result_tree$ref_mutation_position <- lapply(seq_along(processed_nodes),
+                                              function(n_node) {
+    c(result_tree$ref_mutation_position[[n_node]],
+      processed_nodes[[n_node]]$ref)
   })
 }
 
@@ -85,3 +89,15 @@ result_tree$n_mutations <- sapply(result_tree$mutations, length)
 
 # Guardar el resultado final
 save(result_tree, file = "parsed_ancestral_result.rda")
+
+# Representar correlación entre longitud de ramas y número de mutaciones
+ggplot(result_tree, aes(x = branch.length, y = n_mutations)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Correlación entre longitud de rama y número de mutaciones",
+       x = "Longitud de rama",
+       y = "Número de mutaciones") +
+  theme_minimal()
+
+# Guardar la gráfica
+ggsave("correlation_plot.png", width = 10, height = 10)
