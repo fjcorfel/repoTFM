@@ -6,14 +6,14 @@ library(data.table)
 library(ggplot2)
 
 # Read SNP table -> df
-snp_table <- fread("./data/SNP_table_noresis.txt")
+snp_table <- fread("../data/SNP_table_noresis.txt")
 
 # Read splits -> vector
-splits <- readLines("./data/mysplits_column.txt")
+splits <- readLines("../data/mysplits_column.txt")
 splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
-files <- list.files("./data/ancestral_results/", pattern = "*.nexus",
+files <- list.files("../data/ancestral_results/", pattern = "*.nexus",
                     full.names = TRUE)
 
 # Procesar cada uno de los archivos .nexus de ancestral_results/
