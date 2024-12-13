@@ -71,7 +71,7 @@ for (n_file in seq_along(files)){
   
   # List of processed nodes
   processed_nodes <- lapply(seq_along(tree$mutations), function(n_node) {
-    process_node_mutations(tree$mutations[[n_node]], n_file, snp_table, splits)
+    process_node_mutations(tree$mutations[[n_node]], n_file)
   })
   
   # Update result_tree mutations
