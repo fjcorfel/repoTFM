@@ -13,8 +13,8 @@ splits <- readLines("../data/mysplits_column.txt")
 splits <- gsub("\\[|\\]", "", splits)
 splits <- as.numeric(unlist(strsplit(splits, ", ")))
 
-files <- list.files("../data/ancestral_results/", pattern = "*.nexus",
-                    full.names = TRUE)
+files <- list.files("../data/ancestral_results", pattern = "*.nexus",
+                    full.names = TRUE, recursive = TRUE)
 
 # Procesar cada uno de los archivos .nexus de ancestral_results/
 result_tree <- NULL
