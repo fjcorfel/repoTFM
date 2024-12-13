@@ -47,11 +47,12 @@ process_node_mutations <- function(node_mutations, n_file, snp_table, splits){
   list(
     mut = sapply(updated_mutations, `[[`, "new_mutation"),
     ref = sapply(updated_mutations, `[[`, "ref_position")
-    )
-  }
+  )
+}
 
 for (n_file in seq_along(files)){
   
+  print(paste("Procesando árbol", n_file, "..."))
   tree <- treeio::read.beast(files[n_file])
   tree <- treeio::as_tibble(tree)
   
@@ -76,9 +77,9 @@ for (n_file in seq_along(files)){
   # Actulizar posiciones de referencia de las mutaciones
   result_tree$ref_mutation_position <- lapply(seq_along(processed_nodes),
                                               function(n_node) {
-    c(result_tree$ref_mutation_position[[n_node]],
-      processed_nodes[[n_node]]$ref)
-  })
+                                                c(result_tree$ref_mutation_position[[n_node]],
+                                                  processed_nodes[[n_node]]$ref)
+                                              })
 }
 
 # Eliminar duplicados de las mutaciones
