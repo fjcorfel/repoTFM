@@ -20,7 +20,7 @@ files <- list.files("../data/ancestral_results", pattern = "*.nexus",
 result_tree <- NULL
 
 # Fución para procesar las mutaciones de cada nodo
-process_node_mutations <- function(node_mutations, n_file, spn_table, splits){
+process_node_mutations <- function(node_mutations, n_file, snp_table, splits){
   if (is.null(node_mutations)) return(list(mut = NULL, ref = NULL))
   
   updated_mutations <- lapply(node_mutations, function(mutation){
