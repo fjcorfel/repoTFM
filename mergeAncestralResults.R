@@ -22,7 +22,9 @@ result_tree <- NULL
 
 # Function to process individual node mutations of each tree
 process_node_mutations <- function(node_mutations, n_file) {
-  if (is.null(node_mutations)) return(list(mut = NULL, ref = NULL))
+  if (is.null(node_mutations) || all(node_mutations == "" )) {
+    return(list(mut = NULL, ref = NULL))
+  } 
   
   # List of updated mutations for the inidividual node
   # Each mutation is processed at once
@@ -42,6 +44,7 @@ process_node_mutations <- function(node_mutations, n_file) {
     
     # Obtain the reference position from the SNP table
     ref_position <- snp_table$Position[position]
+    ref_position <- paste0(first_char, ref_position, last_char)
     
     # Get updated mutation positon and ref position for the individual mutation
     list(new_mutation = new_mutation, ref_position = ref_position)
