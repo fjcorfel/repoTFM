@@ -5,12 +5,12 @@ library(data.table)
 library(phytools)
 
 ### Load inputs ###
-print("--- LOADING INPUTS ---")
+
 # Tree
 print("Loading tree...")
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
 # SNP table
-print("Loading SNP table")
+print("Loading SNP table...")
 snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
   select(Position, WT, ALT)
 print("Loading mutations table (ancestral recosntruction)...")
@@ -18,24 +18,19 @@ print("Loading mutations table (ancestral recosntruction)...")
 load("../data/ancestral_result.rda")
 
 
-### Processing nodes ###
-print("--- PROCESSING NODES ---")
+### Processing ###
 
-# List for saving results
-nodes_with_mutations_info <- list()
+# List for saving nodes associated to each SNP mutation
+node_mutations_list <- list()
 
 # Iterate for each position of SNP table
 for (n_position in seq_along(snp_table$Position)) {
-  print("--------------------------------")
-  print(paste("SNP POSITION:", n_position))
   
   # Extract mutation
   position <- snp_table$Position[n_position]
   wt <- snp_table$WT[n_position]
   alt <- snp_table$ALT[n_position]
   snp_mutation <- paste0(wt, position, alt)
-  print(paste("MUTATION:", snp_mutation))
-  
   
   # Iterate for each node of ancestral result
   for (n_node in seq_along(result_tree$node)) {
@@ -55,37 +50,22 @@ for (n_position in seq_along(snp_table$Position)) {
           node_label = node_label,
           node_mutation = snp_mutation
         )
-        nodes_with_mutations_info <- append(nodes_with_mutations_info, list(node_info))
+        node_mutations_list <- append(node_mutations_list, list(node_info))
         
       }
     }
   }
 }
 
-# List of nodes that pass the filtering criteria
+### Filtering ###
+
+# List of nodes that meet the filtering criteria
 homoplasy_nodes <- list()
 
 # Iterate over saved nodes for filtering
-for (n_node in seq_along(nodes_with_mutations_info)) {
+for (n_node in seq_along(node_mutations_list)) {
   
-  node_info <- nodes_with_mutations_info[[n_node]]
-  
-  # Check if descendants have the mutation position (check reversions)
-  node_descendants <- phytools::getDescendants(tree, node_info$node_number)
-  mutation <- node_info$node_mutation
-  
-  reversion_found <- FALSE
-  for (descendant in node_descendants) {
-    descendant_mutations <- unlist(result_tree[descendant, "ref_mutation_position"])
-    if (mutation %in% descendant_mutations) {
-      reversion_found <- TRUE
-      # AÑADIR REVERSIÓN A LA TABLA (añadir columna en SNP table)
-      break
-    }
-  }
-  
-  if (reversion_found) next # Skip this node
-  
+  node_info <- node_mutations_list[[n_node]]
   
   # Check if sister or parent has mutation
   sister_node_number <- phytools::getSisters(tree, node_info$node_number)
@@ -101,8 +81,21 @@ for (n_node in seq_along(nodes_with_mutations_info)) {
   
   if (length(tips) < 4) next # Skip this node
   
+  mut_alleles <- 0
+  wt_alleles <- 0
+  for (tip in tips) {
+    tip_mutations <- unlist(result_tree[tip, "ref_mutation_position"])
+    
+    if (mutation %in% tip_mutations) {
+      mut_alleles <- mut_alleles + 1
+    } else {
+      wt_alleles <- wt_alleles + 1
+    }
+  }
   
-  #? Como se puede comprobar el alelo de cada tip ¿?
+  # We save the node and its tips info if it meets the criteria
+  node_info[["mut_alleles"]] <- mut_alleles
+  node_info[["wt_alleles"]] <- wt_alleles
   
   # NODOS CON MUTACIONES QUE SUPEREN EL FILTRADO SE MARCARÁN COMO HOMOPLASIAS
   homoplasy_nodes <- append(homoplasy_nodes, list(node_info))
