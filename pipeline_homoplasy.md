@@ -3,11 +3,9 @@
 
 - SNP_table_noresis.txt (SNP table WITHOUT resistance mutations)
 
-- original alignment (check that ref and lineage0 are included)
+- alignment.fas (check that ref and lineage0 are included)
 
-- original tree (converted to relative distances and with cleaned name)
-
-
+- tree_relative_cleaned.nwk (converted to relative distances and with cleaned name)
 
 - mysplits_column.txt
 
@@ -18,19 +16,19 @@
 1. Sort alignment
 
 ```bash
-seqkit sort -N alignment
+seqkit sort -N ../data/alignment.fas
 ```
 
 2. Split the alignment into 200 parts
 
 ```bash
-splitalignment.py --aln alignment.fas --fnr 200 --dir split_results
+splitalignment.py --aln ../data/alignment.fas --fnr 200 --dir ../data/split_results
 ```
 
 3. Launch `treetime` for each alignment chunk
 
 ```bash
-parallel -j 3 treetime ancestral --aln {} --tree ../data/tree_RELATIVE_CLEANED.nwk --outdir ancestral_results/{.} ::: split_results/*.fas
+parallel -j 3 treetime ancestral --aln {} --tree ../data/tree_relative_cleaned.nwk --outdir ../data/ancestral_results/{.} ::: ../data/split_results/*.fas
 ```
 
 4. Parse mutation positions in partial alignments to genome positions

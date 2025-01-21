@@ -96,7 +96,7 @@ result_tree$mutations <- lapply(result_tree$mutations, unique)
 result_tree$n_mutations <- sapply(result_tree$mutations, length)
 
 # Save final result
-save(result_tree, file = "ancestral_result.rda")
+save(result_tree, file = "../data/ancestral_result.rda")
 
 # Represent correlation between branch length and number of mutations
 # Filter gaps (indels)
@@ -118,4 +118,4 @@ ggplot(result_tree_no_gaps, aes(x = branch.length, y = n_mutations)) +
   theme_minimal()
 
 # Save the plot
-ggsave("correlation_plot.png")
+ggsave("../data/mutations_vs_branchLength.png")
