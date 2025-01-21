@@ -28,7 +28,7 @@ splitalignment.py --aln ../data/alignment.fas --fnr 200 --dir ../data/split_resu
 3. Launch `treetime` for each alignment chunk
 
 ```bash
-parallel -j 3 treetime ancestral --aln {} --tree ../data/tree_relative_cleaned.nwk --outdir ../data/ancestral_results/{.} ::: ../data/split_results/*.fas
+parallel -j 10 treetime ancestral --aln {} --tree ../data/tree.nwk --outdir ../data/ancestral_results/{/.} ::: ../data/split_results/*.fas
 ```
 
 4. Parse mutation positions in partial alignments to genome positions
