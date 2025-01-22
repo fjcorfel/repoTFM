@@ -15,9 +15,11 @@ print("Loading SNP table...")
 snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
   select(Position, WT, ALT)
 
-print("Loading mutations table (ancestral recosntruction)...")
-load("../data/ancestral_result.rda")
+print("Loading ancestral mutations...")
+load("../data/ancestral_result.rda")    # result_tree
 
+# Initialize column for tracking nodes containing reversions
+result_tree$reversion <- FALSE
 
 
 ### HELPER FUNCTIONS ###
@@ -29,7 +31,7 @@ get_node_mutations <- function(result_tree, node_number) {
   return(mutations)
 }
 
-# Check if mutation exists in sister AND parent nodes
+# Check if mutation exists in BOTH sister and parent nodes
 mutation_in_sister_parent <- function(tree, result_tree, node_number, mutation) {
   sister_node_number <- phytools::getSisters(tree, node_number)
   sister_mutations <- get_node_mutations(result_tree, sister_node_number)
@@ -40,18 +42,21 @@ mutation_in_sister_parent <- function(tree, result_tree, node_number, mutation) 
   return(mutation %in% c(sister_mutations, parent_mutations))
 }
 
-#? Check if descendants acquired homoplasy (check reversions)
-mutation_in_descendants <- function(tree, result_tree, node_number, mutation) {
+# Check if descendants acquired homoplasy or not (for checking posible reversions)
+check_node_reversions <- function(tree, result_tree, node_number, mutation) {
   descendants <- unlist(phangorn::Descendants(tree, node_number, "all"))
-  if (is.null(descendants) || length(descendants) == 0) return (FALSE)
   
-  any(sapply(descendants, function(descendant) {
-    mutations <- unlist(result_tree[descendant, "ref_mutation_position"])
-    !is.null(mutations) && mutation %in% mutations
-  }))
-  
-  #! TODO: habría que añadir FLAG a result_tree
+  # Iterate through descendants to check for mutation loss
+  for (descendant in descendants) {
+    descendant_mutations <- get_node_mutations(result_tree, descendant)
+    
+    # If mutation is not present in this descendant, mark it as a reversion
+    if (is.null(descendant_mutations) || !(mutation %in% descendant_mutations)){
+      result_tree$reversion[descendant] <- TRUE
+    }
+  }
 }
+
 
 # Count alleles for mutation and WT in tips
 count_tip_alleles <- function(tree, result_tree, node_number, mutation) {
@@ -69,11 +74,19 @@ count_tip_alleles <- function(tree, result_tree, node_number, mutation) {
 # Process a SNP position from SNP table across all nodes
 # Worker function for parallelization
 find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
+  print(paste0("Position: ", n_position))
   
-  # List for saving homoplasy nodes that meet the criteria
-  # 1. No descendant nodes that acquired homoplasy
-  # 2. At least 2 descendant tips of each allele
-  homoplasy_nodes <- list()
+  # Dataframe for saving homoplasy nodes that meet the criteria
+  # 1. Parent and sister don't have the mutation (mutation not inherited)
+  # 2. At least 2 descendant tips of each allele (mutation and WT)
+  homoplasy_nodes <- data.frame(
+    node_number = integer(),
+    node_label = character(),
+    node_mutation = character(),
+    n_mut_alleles = integer(),
+    n_wt_alleles = integer(),
+    stringsAsFactors = FALSE
+  )
   
   # Get SNP mutation
   snp_position <- snp_table$Position[n_position]
@@ -87,22 +100,29 @@ find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
     node_mutations <- get_node_mutations(result_tree, n_node)
     if (is.null(node_mutations) || !snp_mutation %in% node_mutations) next
     
-    # Check sister and parent nodes
+    # Check if sister and parent have the snp_mutation
     if (mutation_in_sister_parent(tree, result_tree, n_node, snp_mutation)) next
     
     # Check alleles in tips
     tip_allele_counts <- count_tip_alleles(tree, result_tree, n_node, snp_mutation)
     if (is.null(tip_allele_counts)) next
     
-    # If node meets all the criteria -> save node
-    node_info <- list(
-      node_number = n_node,
-      node_label = result_tree[n_node, "label"],
-      node_mutation = snp_mutation,
-      mut_alleles = tip_allele_counts$mut_alleles,
-      wt_alleles = tip_allele_counts$wt_alleles
+    # Check if descendant nodes mantain mutation or not (reversion)
+    check_node_reversions(tree, result_tree, n_node, snp_mutation)
+    
+    
+    # If node meets all the criteria -> save node as row in df
+    homoplasy_nodes <- rbind(
+      homoplasy_nodes,
+      data.frame(
+        node_number = n_node,
+        node_label = result_tree[n_node, "label"],
+        node_mutation = snp_mutation,
+        n_mut_alleles = tip_allele_counts$mut_alleles,
+        n_wt_alleles = tip_allele_counts$wt_alleles,
+        stringsAsFactors = FALSE
+      )
     )
-    homoplasy_nodes <- append(homoplasy_nodes, list(node_info))
   }
   
   return(homoplasy_nodes)
@@ -116,13 +136,13 @@ print("Starting parallel processing...")
 n_cores <- detectCores() 
 
 homoplasy_nodes <- mclapply(seq_along(snp_table$Position), function(n_position) {
-  
   find_homoplasy(n_position, snp_table, tree, result_tree)
-  
-}, mc.cores = n_cores)
+}, mc.cores = 8)
 
-# Combine lists returned by each worker function into a single list
-homoplasy_nodes <- do.call(c, homoplasy_nodes)
+# Combine df returned by each worker function into a single df
+homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
 
+# Save the final result
+save(homoplasy_nodes, file = "homoplasy_nodes.Rda")
 
 print("Processing complete.")
