@@ -13,7 +13,7 @@ tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus"))
 
 print("Loading SNP table...")
 snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
-  select(Position, WT, ALT)
+  select(Position, WT, ALT) 
 
 print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
@@ -57,7 +57,6 @@ check_node_reversions <- function(tree, result_tree, node_number, mutation) {
   }
 }
 
-
 # Count alleles for mutation and WT in tips
 count_tip_alleles <- function(tree, result_tree, node_number, mutation) {
   tips <- unlist(phangorn::Descendants(tree, node_number, "tips"))
@@ -68,13 +67,20 @@ count_tip_alleles <- function(tree, result_tree, node_number, mutation) {
   mut_alleles <- sum(sapply(tips, function(tip) mutation %in% get_node_mutations(result_tree, tip)))
   wt_alleles <- length(tips) - mut_alleles
   
+  # We need at least 2 tips with each allele
+  if (mut_alleles < 2 || wt_alleles < 2) return(NULL)
+  
   return(list(mut_alleles = mut_alleles, wt_alleles = wt_alleles))
 }
 
 # Process a SNP position from SNP table across all nodes
 # Worker function for parallelization
 find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
-  print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S")," - Position: ", n_position))
+  # Debugging
+  if(n_position %% 1000 == 0) {
+    print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S")," - SNP Position: ", n_position))
+  }
+ 
   
   # Dataframe for saving homoplasy nodes that meet the criteria
   # 1. Parent and sister don't have the mutation (mutation not inherited)
@@ -100,16 +106,15 @@ find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
     node_mutations <- get_node_mutations(result_tree, n_node)
     if (is.null(node_mutations) || !snp_mutation %in% node_mutations) next
     
-    # Check if sister and parent have the snp_mutation
+    # Check if sister AND parent have the snp_mutation
     if (mutation_in_sister_parent(tree, result_tree, n_node, snp_mutation)) next
     
     # Check alleles in tips
     tip_allele_counts <- count_tip_alleles(tree, result_tree, n_node, snp_mutation)
     if (is.null(tip_allele_counts)) next
     
-    # Check if descendant nodes mantain mutation or not (reversion)
+    # Check reversions (if descendant nodes mantain mutation or not)
     check_node_reversions(tree, result_tree, n_node, snp_mutation)
-    
     
     # If node meets all the criteria -> save node as row in df
     homoplasy_nodes <- rbind(
@@ -131,7 +136,7 @@ find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
 
 
 ### MAIN PROCESSING ###
-
+start_time <- proc.time()
 print("Starting parallel processing...")
 n_cores <- detectCores() 
 
@@ -142,7 +147,18 @@ homoplasy_nodes <- mclapply(seq_along(snp_table$Position), function(n_position) 
 # Combine df returned by each worker function into a single df
 homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
 
-# Save the final result
-save(homoplasy_nodes, file = "homoplasy_nodes.Rda")
-
 print("Processing complete.")
+
+# Save the final result
+print("Saving results...")
+save(homoplasy_nodes, file = "../data/homoplasy_nodes.Rda")
+save(result_tree, file = "../data/ancestral_result_reversions.Rda")
+
+end_time <- proc.time() - start_time
+
+time_str <- paste("Runtime HomoplasyFinder:\n",
+                  end_time["elapsed"], "secs")
+writeLines(time_str, "runtime_HomoplasyFinder.txt")
+
+print("HomoplasyFinder has finished!")
+
