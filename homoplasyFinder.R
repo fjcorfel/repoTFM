@@ -74,7 +74,7 @@ count_tip_alleles <- function(tree, result_tree, node_number, mutation) {
 # Process a SNP position from SNP table across all nodes
 # Worker function for parallelization
 find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
-  print(paste0("Position: ", n_position))
+  print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S")," - Position: ", n_position))
   
   # Dataframe for saving homoplasy nodes that meet the criteria
   # 1. Parent and sister don't have the mutation (mutation not inherited)
@@ -137,7 +137,7 @@ n_cores <- detectCores()
 
 homoplasy_nodes <- mclapply(seq_along(snp_table$Position), function(n_position) {
   find_homoplasy(n_position, snp_table, tree, result_tree)
-}, mc.cores = 8)
+}, mc.cores = n_cores - 1)
 
 # Combine df returned by each worker function into a single df
 homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
