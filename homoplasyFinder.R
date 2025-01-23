@@ -100,7 +100,9 @@ find_homoplasy <- function(n_position, snp_table, tree, result_tree) {
   alt <- snp_table$ALT[n_position]
   snp_mutation <- paste0(wt, snp_position, alt)
   
-
+  #! This for loop is a very resource-intensive operation
+  # TODO: OPTIMIZE
+  #* Using dplyr would be better for this case
   for (n_node in seq_along(result_tree$node)) {
     # Check if node has the snp_mutation
     node_mutations <- get_node_mutations(result_tree, n_node)
