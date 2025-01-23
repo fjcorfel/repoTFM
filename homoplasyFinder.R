@@ -18,8 +18,12 @@ snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
 print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
 
+# Convert to tibble for easier and more efficient dplyr manipulation
+result_tree <- as_tibble(result_tree)
+
 # Initialize column for tracking nodes containing reversions
-result_tree$reversion <- FALSE
+result_tree <- result_tree %>%
+  mutate(reversion = FALSE)
 
 
 ### HELPER FUNCTIONS ###
