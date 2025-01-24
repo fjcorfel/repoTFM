@@ -13,8 +13,7 @@ tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus"))
 
 print("Loading SNP table...")
 snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
-  select(Position, WT, ALT) %>%
-  slice_head(n = 10000)
+  select(Position, WT, ALT)
 
 print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
@@ -74,7 +73,7 @@ count_wt_alleles <- function(tips, mut_alleles) {
 # Find if given SNP table position contains homoplasy
 find_homoplasy <- function(n_position) {
   # Debugging
-  if(n_position %% 1 == 0) {
+  if(n_position %% 1000 == 0) {
     print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S")," - SNP Position: ", n_position))
   }
   
