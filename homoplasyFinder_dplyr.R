@@ -18,11 +18,10 @@ print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
 
 # Convert to tibble for easier and more efficient dplyr manipulation
-result_tree <- as_tibble(result_tree)
+result_tree <- as_tibble(result_tree) %>%
+  select(node, parent, label, ref_mutation_position)
 
-# Initialize column for tracking nodes containing reversions
-#result_tree <- result_tree %>%
- # mutate(reversion = FALSE)
+print("Inputs loaded.")
 
 
 ### FUNCTIONS ###
