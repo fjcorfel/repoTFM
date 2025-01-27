@@ -12,7 +12,7 @@ print("Loading tree...")
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
 
 print("Loading SNP table mutations...")
-snp_table <- data.table::fread("../data/SNP_table_noresis_mutations.txt")$Mutation
+snps <- data.table::fread("../data/SNP_table_noresis_mutations.txt")$Mutation
 
 print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
@@ -70,21 +70,21 @@ count_wt_alleles <- function(tips, mut_alleles) {
 
 # Find if given SNP table position contains homoplasy
 find_homoplasy <- function(n_position) {
+
+  # Get SNP mutation
+  snp_mutation <- snps[n_position]
+
   # Debugging
   if(n_position %% 1000 == 0) {
-    print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S")," - SNP Position: ", n_position))
+    print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+                 " - Position: ", n_position,
+                 " - Mutation: ", snp_mutation))
   }
-  
-  # Get SNP mutation
-  snp_position <- snp_table$Position[n_position]
-  wt <- snp_table$WT[n_position]
-  alt <- snp_table$ALT[n_position]
-  snp_mutation <- paste0(wt, snp_position, alt)
   
   # Filter nodes that have the SNP mutation
   nodes_with_mutation <- result_tree %>%
     rowwise() %>%
-    filter(snp_mutation %in% ref_mutation_position) %>%
+    filter(snp_mutation %in% unlist(ref_mutation_position)) %>%
     select(parent, node, label, ref_mutation_position) %>%
     ungroup()
   
