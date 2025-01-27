@@ -6,7 +6,7 @@ library(parallel)
 snp_table <- fread("../data/SNP_table_noresis_mutations.txt")
 # Vector of all SNPs
 snps <- snp_table$Mutation
-snps <- head(snps, n = 1000)
+snps <- head(snps, n = 10000)
 rm(snp_table)
 
 # Load mutation table (ancestral_result -> result_tree)
@@ -15,7 +15,6 @@ result_tree <- result_tree %>%
   select(node, label, ref_mutation_position)
 # List with mutations for each node
 muts <- result_tree$ref_mutation_position
-muts <- head(muts, n = 1000)
 rm(result_tree)
 
 # Set up cluster
