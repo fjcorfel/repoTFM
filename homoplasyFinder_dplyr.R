@@ -153,6 +153,3 @@ time_str <- paste("Runtime HomoplasyFinder:\n",
 writeLines(time_str, "runtime_HomoplasyFinder.txt")
 
 print("HomoplasyFinder has finished!")
-
-
-
