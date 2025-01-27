@@ -11,9 +11,8 @@ library(parallel)
 print("Loading tree...")
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
 
-print("Loading SNP table...")
-snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
-  select(Position, WT, ALT)
+print("Loading SNP table mutations...")
+snp_table <- data.table::fread("../data/SNP_table_noresis_mutations.txt")$Mutation
 
 print("Loading ancestral mutations...")
 load("../data/ancestral_result.rda")    # result_tree
@@ -134,7 +133,7 @@ start_time <- proc.time()
 print("Starting parallel processing...")
 n_cores <- detectCores() 
 
-homoplasy_nodes <- mclapply(seq_along(snp_table$Position), function(n_position) {
+homoplasy_nodes <- mclapply(seq_along(snp_table), function(n_position) {
   find_homoplasy(n_position)
 }, mc.cores = n_cores - 1)
 
