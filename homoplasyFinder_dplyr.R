@@ -68,6 +68,21 @@ count_wt_alleles <- function(tips, mut_alleles) {
   return(wt_alleles)
 }
 
+check_descendant_mutations <- function(node, mutation) {
+  
+  # Check if any descendant has the same mutation as the node
+  descendants <- phangorn::Descendants(tree, node, "all")
+  for (descendant in descendants) {
+    descendant_mutations <- get_node_mutations(descendant)
+    if (mutation %in% descendant_mutations) {
+      next
+      #? Add REVERSION FLAG to node (node or descendant?)
+    }
+  }
+  
+  # WIP
+}
+
 # Find if given SNP table position contains homoplasy
 find_homoplasy <- function(n_position) {
 
