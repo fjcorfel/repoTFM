@@ -36,55 +36,21 @@ get_node_mutations <- function(node) {
   return(mutations)
 }
 
-
-# Check if mutation is in parent OR sister (mutation inherited)
-# Return bool
-mutation_in_sister_parent <- function(node, mutation) {
+# Get mut alleles from a given node (check node tips )
+get_mut_alleles <- function(node) {
+  tips <- unlist(phangorn::Descendants(tree, node, "tips"))
   
-  if (is.null(node) || length(node) == 0) {
-    return(FALSE)
-  }
-  
-  sister_node <- phytools::getSisters(tree, node)
-  sister_mutations <- get_node_mutations(sister_node)
-  
-  if (node == getRoot(tree)) {
-    parent_mutations <- NULL
-  } else {
-    parent_node <- phytools::getParent(tree, node)
-    parent_mutations <- get_node_mutations(parent_node)
-  }
-  
-  return(mutation %in% c(sister_mutations, parent_mutations))
+  return(length(tips))
 }
 
-# Count MUT alleles
-# Return int
-count_mut_alleles <- function(tips, mutation) {
-  tips <- unlist(tips)
-  mut_alleles <- sum(sapply(tips, function(tip) mutation %in% get_node_mutations(tip)))
-  return(mut_alleles)
+# Get wt alleles from a given node (check sister tips)
+get_wt_alleles <- function(node) {
+  sister <- phytools::getSisters(tree, node)
+  sister_tips <- unlist(phangorn::Descendants(tree, sister, "tips"))
+  
+  return(length(sister_tips))
 }
 
-count_wt_alleles <- function(tips, mut_alleles) {
-  wt_alleles <- length(tips) - mut_alleles
-  return(wt_alleles)
-}
-
-check_descendant_mutations <- function(node, mutation) {
-  
-  # Check if any descendant has the same mutation as the node
-  descendants <- phangorn::Descendants(tree, node, "all")
-  for (descendant in descendants) {
-    descendant_mutations <- get_node_mutations(descendant)
-    if (mutation %in% descendant_mutations) {
-      next
-      #? Add REVERSION FLAG to node (node or descendant?)
-    }
-  }
-  
-  # WIP
-}
 
 # Find if given SNP table position contains homoplasy
 find_homoplasy <- function(n_position) {
@@ -106,53 +72,44 @@ find_homoplasy <- function(n_position) {
     select(parent, node, label, ref_mutation_position) %>%
     ungroup()
   
+  # TODO: Check reversions
   # Criteria for saving a node as homoplasy:
-  # 1. Parent and sister don't have the mutation (mutation not inherited)
-  # 2. At least 2 descendant tips of each allele (mutation and WT)
-  
-  # Filter nodes with the mutation in parent OR sister (mutation inherited)
-  nodes_without_family_mutations <- nodes_with_mutation %>%
-    rowwise() %>%
-    mutate(
-      mutation_in_family = mutation_in_sister_parent(node, snp_mutation)
-    ) %>%
-    filter(!mutation_in_family) %>%
-    ungroup()
+  # At least 2 descendant tips of each allele (mutation and WT)
   
   # Filter nodes with 2 tips of each allele
-  nodes_with_alleles <- nodes_without_family_mutations %>%
+  nodes_with_alleles <- nodes_with_mutation %>%
     rowwise() %>%
     mutate(
-      node_tips = phangorn::Descendants(tree, node, "tips")
+      n_mut_alleles = get_mut_alleles(node)
     ) %>%
     mutate(
-      n_mut_alleles = count_mut_alleles(node_tips, snp_mutation)
+      n_wt_alleles = get_wt_alleles(node)
     ) %>%
-    mutate(
-      n_wt_alleles = count_wt_alleles(node_tips, n_mut_alleles)
-    ) %>% 
     filter(
       n_mut_alleles >= 2,
       n_wt_alleles >= 2
     ) %>%
     ungroup()
-  
+    
   homoplasy_nodes <- nodes_with_alleles %>%
-    mutate(mutation = snp_mutation) %>%
-    select(node, label, mutation, n_mut_alleles, n_wt_alleles)
+    mutate(
+      mutation = snp_mutation,
+      RoHO = n_mut_alleles / n_wt_alleles
+      ) %>%
+    select(node, label, mutation, n_mut_alleles, n_wt_alleles, RoHO)
     
   return(homoplasy_nodes)
 }
 
 
 ### MAIN PROCESSING ###
-start_time <- proc.time()
+
 print("Starting parallel processing...")
 n_cores <- detectCores() 
 
-homoplasy_nodes <- mclapply(seq_along(snp_table), function(n_position) {
+homoplasy_nodes <- mclapply(seq_along(snps), function(n_position) {
   find_homoplasy(n_position)
-}, mc.cores = n_cores - 1)
+}, mc.cores = 12)
 
 # Combine df returned by each worker function into a single df
 homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
@@ -161,13 +118,8 @@ print("Processing complete.")
 
 # Save the final result
 print("Saving results...")
-save(homoplasy_nodes, file = "../data/homoplasy_nodes.Rda")
+save(homoplasy_nodes, file = "../data/homoplasy_nodes.rda")
 #save(result_tree, file = "../data/ancestral_result_reversions.Rda")
 
-end_time <- proc.time() - start_time
-
-time_str <- paste("Runtime HomoplasyFinder:\n",
-                  end_time["elapsed"], "secs")
-writeLines(time_str, "runtime_HomoplasyFinder.txt")
 
 print("HomoplasyFinder has finished!")
