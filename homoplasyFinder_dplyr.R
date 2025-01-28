@@ -8,16 +8,19 @@ library(parallel)
 
 ### LOAD INPUTS ###
 
+# Load tree -> phylo object
 print("Loading tree...")
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
 
+# Load SNP table mutations -> vector
+# Mutations previously filtered for > 1 occurrence (possible homoplasy)
 print("Loading SNP table mutations...")
-snps <- data.table::fread("../data/SNP_table_noresis_mutations.txt")$Mutation
+snps <- data.table::fread("../data/SNP_table_noresis_mutations_filtered.txt")$Mutation
 
-print("Loading ancestral mutations...")
+# Load tree nodes and their associated mutations -> tibble
+print("Loading ancestral nodes and mutations...")
 load("../data/ancestral_result.rda")    # result_tree
-
-# Convert to tibble for easier and more efficient dplyr manipulation
+# Convert to tibble for more efficient dplyr manipulation
 result_tree <- as_tibble(result_tree) %>%
   select(node, parent, label, ref_mutation_position)
 
