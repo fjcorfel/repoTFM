@@ -25,7 +25,7 @@ clusterExport(cl, varlist = c("snps"))
 
 # Create binary table (rows = nodes, cols = SNPs)
 binary_table <- parLapply(cl, muts, function(node_muts){
-  as.numeric(snps %in% node_muts)
+  snps %in% node_muts
 })
 
 # Stop the cluster
