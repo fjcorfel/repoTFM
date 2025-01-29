@@ -7,5 +7,3 @@ snp_table <- data.table::fread("../data/SNP_table_noresis.txt") %>%
   select(Mutation)
 
 write.table(snp_table, file = "../data/SNP_table_noresis_mutations.txt", quote = FALSE, row.names = FALSE)
-
-tabla <- fread("../data/SNP_table_noresis_mutations.txt")
