@@ -77,7 +77,7 @@ find_homoplasy <- function(n_position) {
   snp_mutation <- snps[n_position]
 
   # Debugging
-  if(n_position %% 1 == 0) {
+  if(n_position %% 1000 == 0) {
     print(paste0(format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                  " - Position: ", n_position,
                  " - Mutation: ", snp_mutation))
@@ -141,7 +141,7 @@ n_cores <- detectCores()
 
 homoplasy_nodes <- mclapply(seq_along(snps), function(n_position) {
   find_homoplasy(n_position)
-}, mc.cores = 14)
+}, mc.cores = 16)
 
 # Combine df returned by each worker function into a single df
 homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
