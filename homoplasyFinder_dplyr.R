@@ -95,21 +95,8 @@ find_homoplasy <- function(n_position) {
   # WT and mutation branches are pure (no appearing of the mutation or reversions)
   # At least 2 descendant tips of each allele (mutation and WT)
   
-  # Check if mutation and WT branches are pure
-  filtered_alleles <- nodes_with_mutation %>%
-    rowwise() %>%
-    mutate(
-      has_reversion = check_reversions(node, snp_mutation),
-      has_mutation_in_wt = check_mutations_in_wt(node, snp_mutation)
-    ) %>%
-    filter(
-      !has_reversion, 
-      !has_mutation_in_wt
-    ) %>%
-    ungroup()
-  
   # Filter nodes with 2 tips of each allele
-  nodes_with_alleles <- filtered_alleles %>%
+  nodes_with_alleles <- nodes_with_mutation %>%
     rowwise() %>%
     mutate(
       n_mut_alleles = get_mut_alleles(node)
@@ -122,13 +109,37 @@ find_homoplasy <- function(n_position) {
       n_wt_alleles >= 2
     ) %>%
     ungroup()
-    
-  homoplasy_nodes <- nodes_with_alleles %>%
+  
+  # Verify that nodes are not empty before continue
+  if (nrow(nodes_with_alleles) == 0) {
+    return(tibble(node=integer(), label = character(), mutation = character(),
+                  n_mut_alleles = integer(), n_wt_alleles = integer()))
+  }
+  
+  # Check if mutation and WT branches are pure
+  filtered_alleles <- nodes_with_alleles %>%
+    rowwise() %>%
     mutate(
-      mutation = snp_mutation,
-      RoHO = n_mut_alleles / n_wt_alleles
+      has_reversion = check_reversions(node, snp_mutation),
+      has_mutation_in_wt = check_mutations_in_wt(node, snp_mutation)
+    ) %>%
+    filter(
+      !has_reversion, 
+      !has_mutation_in_wt
+    ) %>%
+    ungroup()
+  
+  # Verify that nodes are not empty before continue
+  if (nrow(filtered_alleles) == 0) {
+    return(tibble(node=integer(), label = character(), mutation = character(),
+                  n_mut_alleles = integer(), n_wt_alleles = integer()))
+  }
+  
+  homoplasy_nodes <- filtered_alleles %>%
+    mutate(
+      mutation = snp_mutation
       ) %>%
-    select(node, label, mutation, n_mut_alleles, n_wt_alleles, RoHO)
+    select(node, label, mutation, n_mut_alleles, n_wt_alleles)
     
   return(homoplasy_nodes)
 }
@@ -141,7 +152,7 @@ n_cores <- detectCores()
 
 homoplasy_nodes <- mclapply(seq_along(filtered_mutations), function(n_position) {
   find_homoplasy(n_position)
-}, mc.cores = 16)
+}, mc.cores = 14)
 
 # Combine df returned by each worker function into a single df
 homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
@@ -151,7 +162,6 @@ print("Processing complete.")
 # Save the final result
 print("Saving results...")
 save(homoplasy_nodes, file = "../data/homoplasy_nodes.rda")
-#save(result_tree, file = "../data/ancestral_result_reversions.Rda")
 
 
 print("HomoplasyFinder has finished!")

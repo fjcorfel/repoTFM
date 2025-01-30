@@ -4,7 +4,7 @@ library(dplyr)
 # Load SNP count
 load("../data/SNP_count.rda")
 # Filter SNPs that appear more than once
-snp_count_filtered <- snp_count[snp_count > 5]
+snp_count_filtered <- snp_count[snp_count >= 5]
 
 # Load SNP table and select mutations
 snp_table_mutations <- data.table::fread("../data/SNP_table_noresis.txt") %>%

@@ -12,14 +12,13 @@ homoplasy_nodes <- homoplasy_nodes %>%
 
 
 ggplot(homoplasy_nodes, aes(y = log2RoHO)) + 
-  geom_boxplot(fill = "cyan", color = "black") 
-  
+  geom_boxplot(fill = "cyan", color = "black") +
   theme_minimal()
 
 
 homoplasy_nodes_phoR <- homoplasy_nodes %>%
   filter(synonym == "phoR")
 
-ggplot(homoplasy_nodes, aes(x ="", y=RoHO)) +
+ggplot(homoplasy_nodes, aes(x ="", y=log2RoHO)) +
   geom_violin(fill = "lightgreen") +
   geom_jitter(data = homoplasy_nodes_phoR, color = "red")
