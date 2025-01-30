@@ -1,24 +1,28 @@
 library(ggplot2)
 library(dplyr)
 
-load("../data/homoplasy_nodes_genes.rda")
+load("../data/homoplasy_mutations.rda")
 
-RoHO <- homoplasy_nodes$RoHO[homoplasy_nodes$RoHO < 20]
-hist(RoHO, breaks = 1000)
-
-homoplasy_nodes <- homoplasy_nodes %>%
-  filter(RoHO < 20) %>%
-  mutate(log2RoHO = log2(RoHO))
-
-
-ggplot(homoplasy_nodes, aes(y = log2RoHO)) + 
-  geom_boxplot(fill = "cyan", color = "black") +
-  theme_minimal()
-
-
-homoplasy_nodes_phoR <- homoplasy_nodes %>%
+# Violin plot
+phor_mutations <- homoplasy_nodes_annotated_byMutation %>%
   filter(synonym == "phoR")
 
-ggplot(homoplasy_nodes, aes(x ="", y=log2RoHO)) +
-  geom_violin(fill = "lightgreen") +
-  geom_jitter(data = homoplasy_nodes_phoR, color = "red")
+homoplasy_nodes_annotated_byMutation %>%
+  ggplot(aes(x="", y=log2(RoHO))) +
+  geom_violin(fill = "coral2") +
+  geom_point(data = phor_mutations, color = "darkslateblue", alpha = 0.8, size = 2.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", size = 0.5, alpha = 0.6)
+  
+ # Histogram
+homoplasy_nodes_annotated_byMutation %>%
+  ggplot(aes(x = log2(RoHO))) +
+  geom_histogram(binwidth = 0.1, fill="coral2", color="#e9ecef", alpha = 0.9)
+
+# Boxplot
+homoplasy_nodes_annotated_byMutation %>%
+  filter(RoHO < 20) %>%
+  ggplot(aes(x="",y = log2(RoHO))) +
+  geom_boxplot(fill = "coral2") +
+  geom_jitter(data = phor_mutations, color = "darkslateblue", alpha = 0.8, size = 2.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", size = 0.5, alpha = 0.6)
+  
