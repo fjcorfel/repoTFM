@@ -15,8 +15,8 @@ tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus"))
 
 # Load SNP table mutations -> vector
 # Mutations previously filtered for > 1 occurrence (possible homoplasy)
-print("Loading SNP table mutations...")
-snps <- data.table::fread("../data/SNP_table_noresis_mutations_filtered.txt")$Mutation
+print("Loading SNP mutations...")
+load("../data/filtered_mutations.rda")
 
 # Load tree nodes and their associated mutations -> tibble
 print("Loading ancestral nodes and mutations...")
@@ -55,7 +55,7 @@ get_wt_alleles <- function(node) {
 check_reversions <- function(node, mutation) {
   mutation_position <- as.numeric(str_extract(mutation, "\\d+"))
   descendants <- phangorn::Descendants(tree, node, "all")
-  descendant_mutations <- sapply(descendants, get_node_mutations)
+  descendant_mutations <- unlist(sapply(descendants, get_node_mutations), use.names = FALSE)
   
   matches <- str_detect(descendant_mutations, paste0("(?<=\\D)", mutation_position, "(?=\\D)"))
   return(any(matches))
@@ -74,7 +74,7 @@ check_mutations_in_wt <- function(node, mutation) {
 find_homoplasy <- function(n_position) {
 
   # Get SNP mutation
-  snp_mutation <- snps[n_position]
+  snp_mutation <- filtered_mutations[n_position]
 
   # Debugging
   if(n_position %% 1000 == 0) {
@@ -139,7 +139,7 @@ find_homoplasy <- function(n_position) {
 print("Starting parallel processing...")
 n_cores <- detectCores() 
 
-homoplasy_nodes <- mclapply(seq_along(snps), function(n_position) {
+homoplasy_nodes <- mclapply(seq_along(filtered_mutations), function(n_position) {
   find_homoplasy(n_position)
 }, mc.cores = 16)
 
