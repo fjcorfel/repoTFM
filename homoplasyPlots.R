@@ -3,10 +3,19 @@ library(dplyr)
 
 load("../data/homoplasy_mutations.rda")
 
-# Violin plot
 phor_mutations <- homoplasy_nodes_annotated_byMutation %>%
   filter(synonym == "phoR")
 
+katg_mutations <- homoplasy_nodes_annotated_byMutation %>%
+  filter(synonym == "katG")
+
+rpob_mutations <- homoplasy_nodes_annotated_byMutation %>%
+  filter(synonym == "rpoB")
+
+siga_mutations <- homoplasy_nodes_annotated_byMutation %>%
+  filter(synonym == "sigA")
+
+# Violin plot
 homoplasy_nodes_annotated_byMutation %>%
   ggplot(aes(x="", y=log2(RoHO))) +
   geom_violin(fill = "coral2") +
