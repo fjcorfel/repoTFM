@@ -1,8 +1,9 @@
 # TODO
 
-## Normalizar
+## Plots
 
-Habría que normalizar los valores en base al tamaño de los genes (end - start) de la SNP table
+Hay que hacer los plots y resaltar *katG* y *rpoB* junto a *phoR*.
+Añadir también *sigA* como control de gen muy conservado.
 
 ## Wilcoxson test
 
