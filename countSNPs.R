@@ -3,21 +3,24 @@ library(dplyr)
 library(parallel)
 
 # Load SNP table
-snp_table <- fread("../data/SNP_table_noresis_mutations.txt")
-# Vector of all SNPs
-snps <- snp_table$Mutation
-rm(snp_table)
+snp_table <- fread("../data/SNP_table_resis.txt")
+
+snp_table_mutations <- snp_table %>%
+  mutate(Mutation = paste0(WT, Position, ALT)) %>%
+  select(Mutation)
+
+snps <- snp_table_mutations$Mutation
+
 
 # Load mutation table (ancestral_result -> result_tree)
-load("../data/ancestral_result.rda")
-result_tree <- result_tree %>%
+load("../data/ancestral_result_resis.rda")
+result_tree_resis <- result_tree_resis %>%
   select(node, label, ref_mutation_position)
 # List with mutations for each node
-muts <- result_tree$ref_mutation_position
-rm(result_tree)
+muts <- result_tree_resis$ref_mutation_position
 
 # Set up cluster
-n_cores <- 16
+n_cores <- 14
 cl <- makeCluster(n_cores)
 
 # Share objects to the cluster
@@ -37,4 +40,4 @@ binary_table <- as.data.frame(do.call(rbind, binary_table))
 # Sum of the total of nodes containing each mutation
 snp_count <- colSums(binary_table)
 names(snp_count) <- snps
-save(snp_count, file = "../data/SNP_mutation_count.rda")
+save(snp_count, file = "../data/SNP_count_resis.rda")
