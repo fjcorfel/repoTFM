@@ -20,7 +20,6 @@ homoplasy_nodes_annotated_byMutation %>%
 
 # Boxplot
 homoplasy_nodes_annotated_byMutation %>%
-  filter(RoHO < 20) %>%
   ggplot(aes(x="",y = log2(RoHO))) +
   geom_boxplot(fill = "coral2") +
   geom_jitter(data = phor_mutations, color = "darkslateblue", alpha = 0.8, size = 2.5) +

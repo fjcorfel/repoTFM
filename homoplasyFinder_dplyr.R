@@ -219,13 +219,17 @@ save(homoplasy_nodes_annotated_byMutation, file = "../data/homoplasy_mutations.r
 
 # Group by gene
 homoplasy_nodes_annotated_byGene <- homoplasy_nodes_annotated %>%
-  group_by(synonym) %>%
+  group_by(Rv_number) %>%
   summarise(
     n_mut_alleles = sum(n_mut_alleles),
     n_wt_alleles = sum(n_wt_alleles),
     RoHO = n_mut_alleles / n_wt_alleles
   ) %>%
+  mutate(
+    synonym = snp_table$Synonym[match(Rv_number, snp_table$Rv_number)]
+  ) %>%
   select(
+    Rv_number,
     synonym,
     n_mut_alleles,
     n_wt_alleles,
