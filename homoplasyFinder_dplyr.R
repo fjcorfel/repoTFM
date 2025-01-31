@@ -7,6 +7,8 @@ library(parallel)
 library(stringr)
 
 
+### FILTER SNPS ###
+
 # Load SNP count
 load("../data/SNP_count.rda")
 # Filter SNPs that appear more than once
@@ -176,6 +178,9 @@ homoplasy_nodes <- do.call(rbind, homoplasy_nodes)
 print("Processing complete.")
 # Remove result tree from environment for saving memory
 rm(result_tree)
+
+
+### SAVING RESULTS ### 
 
 # Save the final result
 print("Saving results...")
