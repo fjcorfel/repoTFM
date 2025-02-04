@@ -18,7 +18,7 @@ homoplasy_nodes_annotated_byMutation_norm <- homoplasy_nodes_annotated_byMutatio
     gene_length = gene_lengths$gene_length[match(Rv_number, gene_lengths$Rv_number)]
   ) %>%
   mutate(
-    normalized_RoHO = RoHO / gene_length
+    norm_RoHO = RoHO / gene_length
   )
 
 save(homoplasy_nodes_annotated_byMutation_norm, file = "../data/homoplasy_mutations_norm.rda")
