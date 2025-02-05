@@ -4,6 +4,7 @@ library(pbapply)   # Progress bar for parallel loops
 library(phangorn)
 library(phytools)
 library(rvmethod)
+library(ggplot2)
 
 ### PRE PROCESSING ############################################################
 
@@ -94,8 +95,8 @@ select_nodes <- function(n_nodes, tree, selected_nodes) {
 
 # phoR mutation with RoHO = 7.23
 mutation <- "C852577A"
-n_appearances <- 5
-real_RoHO <- 7.21
+n_appearances <- 6
+real_RoHO <- 7.23
 
 set.seed(777)
 
@@ -127,6 +128,13 @@ mu <- mean(random_RoHO_values)
 sigma <- sd(random_RoHO_values)
 
 # Create the probability function using gaussfunc
-pvalue <- gaussfunc(real_RoHO, mu = mu, sigma = sigma)
+pvalue <- round(gaussfunc(real_RoHO, mu = mu, sigma = sigma), 2)
 
-print(paste(mutation, "- pvalue:", pvalue))
+ggplot(data = as.data.frame(random_RoHO_values), aes(x = log2(random_RoHO_values))) +
+  geom_density(fill = "coral2", alpha = 0.9) +
+  geom_point(aes(x = real_RoHO, y = 0), size = 2.5, color = "green4") +
+  geom_text(aes(x = real_RoHO, y = 0.025, label = paste0(mutation,"\n", "RoHO = ",real_RoHO,"\n","pvalue = ", pvalue)),
+            size = 4) +
+  labs(x = "log2 Random RoHO",
+       y = "Density")
+  
