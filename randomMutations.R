@@ -64,7 +64,7 @@ is_compatible <- function(previous_nodes, node, tree) {
   return(TRUE)
 }
 
-select_nodes <- function(n_nodes, tree, selected_nodes) {
+select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
   
   while(length(selected_nodes) < n_nodes) {
     random_node <- sample(filtered_nodes$node, 1)
@@ -88,69 +88,60 @@ load("../data/homoplasy_mutations.rda")
 load("../data/n_node_tips.rda")
 load("../data/n_sister_tips.rda")
 load("../data/sisters.rda")
+load("../data/SNP_count.rda")
+load("../data/homoplasy_nodes.rda")
 
 # Select mutations of interest (RoHO > 1)
 top_RoHO_mutations <- homoplasy_nodes_annotated_byMutation %>%
   arrange(desc(RoHO)) %>%
   filter(RoHO > 1)
 
-pvalues <- vector("list", nrow(top_RoHO_mutations))
-n_nodes <- vector("list", nrow(top_RoHO_mutations))
-
-for (top_mutation in 1:nrow(top_RoHO_mutations)) {
+# Function to process each mutation in parallel
+process_mutation <- function(top_mutation) {
+  
+  message(paste0("Processing mutation ", top_mutation))
   
   homoplasy <- top_RoHO_mutations$mutation[[top_mutation]]
-  
-  load("../data/SNP_count.rda")
-  
-  n_appearances <- unname(snp_count[homoplasy]) 
+  n_appearances <- unname(snp_count[homoplasy])
   real_RoHO <- top_RoHO_mutations$RoHO[[top_mutation]]
-  
-  load("../data/homoplasy_nodes.rda")
   
   original_mutation_nodes <- homoplasy_nodes %>%
     filter(mutation == homoplasy) %>%
     left_join(tree_tibble, by = c("node", "label"))
   
-  n_nodes[[top_mutation]] <- nrow(original_mutation_nodes)
+  n_nodes <- nrow(original_mutation_nodes)
   
-  if (nrow(original_mutation_nodes) > 1) {
-    root_distance_mean = mean(original_mutation_nodes$distance_to_root)
-    root_distance_sd = sd(original_mutation_nodes$distance_to_root)
+  if (n_nodes > 1) {
+    root_distance_mean <- mean(original_mutation_nodes$distance_to_root)
+    root_distance_sd <- sd(original_mutation_nodes$distance_to_root)
     
     top_limit <- root_distance_mean + 2 * root_distance_sd
     bottom_limit <- root_distance_mean - 2 * root_distance_sd
   } else {
-    top_limit <- original_mutation_nodes$distance_to_root +  original_mutation_nodes$distance_to_root * 0.1
-    bottom_limit <- original_mutation_nodes$distance_to_root - original_mutation_nodes$distance_to_root * 0.1
+    top_limit <- original_mutation_nodes$distance_to_root * 1.1
+    bottom_limit <- original_mutation_nodes$distance_to_root * 0.9
   }
   
- 
-  
-  # Combine results back into tree_tibble
+  # Filter nodes based on homoplasy criteria
   filtered_nodes <- tree_tibble %>%
     mutate(
       n_node_tips = n_node_tips,
       sister = sisters,
       n_sister_tips = n_sister_tips
     ) %>%
-    filter(n_node_tips >= 2,
-           n_sister_tips >= 2,
-           distance_to_root <= top_limit,
-           distance_to_root >= bottom_limit)
+    filter(
+      n_node_tips >= 2,
+      n_sister_tips >= 2,
+      distance_to_root <= top_limit,
+      distance_to_root >= bottom_limit)
   
-  
-  # Vector to store all the random generated RoHO values
+  # Vector to store 1000 random RoHO values (run sequentially inside process_mutation)
   random_RoHO_values <- numeric(1000)
   
   for (i in 1:1000) {
-    print(paste0("Random: ", i))
-    
-    # Vector to store selected nodes to add mutation
-    # We start with a fresh preselected node each iteration
+      
     selected_nodes <- c(sample(filtered_nodes$node, 1))
-    
-    mutation_nodes <- select_nodes(n_appearances, tree, selected_nodes)
+    mutation_nodes <- select_nodes(n_appearances, tree, selected_nodes, filtered_nodes)
     
     random_RoHO <- filtered_nodes %>%
       filter(node %in% mutation_nodes) %>%
@@ -163,17 +154,20 @@ for (top_mutation in 1:nrow(top_RoHO_mutations)) {
     random_RoHO_values[i] <- random_RoHO$RoHO
   }
   
-  # Calculate mean and standard deviation
+  # Compute p-value
   mu <- mean(random_RoHO_values)
   sigma <- sd(random_RoHO_values)
-  
-  # Create the probability function using gaussfunc
   pvalue <- gaussfunc(real_RoHO, mu = mu, sigma = sigma)
-  pvalues[[top_mutation]] <- pvalue
   
+  return(list(pvalue = pvalue, n_nodes = n_nodes))
 }
 
-top_RoHO_mutations$pvalue <- unlist(pvalues)
-top_RoHO_mutations$n_nodes <- unlist(n_nodes)
+# Run the main process in parallel for each mutation
+results <- mclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 12)
 
-save(top_RoHO_mutations, file = "../data/top_RoHO_mutations.rda")
+# Extract results into final table
+top_RoHO_mutations$pvalue <- sapply(results, function(x) x$pvalue)
+top_RoHO_mutations$n_nodes <- sapply(results, function(x) x$n_nodes)
+
+# Save results
+save(top_RoHO_mutations, file = "../data/top_RoHO_mutations_v2.0.rda")
