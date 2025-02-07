@@ -58,4 +58,23 @@ raw_boxplot <- homoplasy_nodes_annotated_byMutation %>%
         axis.text.x = element_blank(), 
         axis.ticks.x = element_blank())
 
-  
+
+
+# N Nodes Vs RoHO
+load("../data/top_RoHO_mutations.rda")
+load("../data/homoplasy_mutations.rda")
+load("../data/n_nodes_per_homoplasy.rda")
+
+data <- homoplasy_nodes_annotated_byMutation %>%
+  left_join(n_homoplasy_nodes, by = "mutation")
+
+data %>%
+  ggplot(aes(x = n_nodes, y = RoHO)) +
+  geom_point(alpha = 0.8, size = 1) +
+  geom_point(data = top_RoHO_mutations, aes(x = n_nodes, y = RoHO, color = pvalue <= 0.05)) +
+  scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
+  geom_hline(yintercept = min(top_RoHO_mutations$RoHO),
+             linetype = "dashed",
+             color = "blue",
+             alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 100))
