@@ -66,7 +66,18 @@ is_compatible <- function(previous_nodes, node, tree) {
 
 select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
   
+  max_iter <- 1000
+  iter <- 0
+  
   while(length(selected_nodes) < n_nodes) {
+    
+    iter <- iter + 1
+    if (iter == 15) warning("This node will take a bit...")
+    if (iter > max_iter) {
+      warning("This node selection is being ABORTED...")
+      break
+    }
+    
     random_node <- sample(filtered_nodes$node, 1)
     
     if (is_compatible(selected_nodes, random_node, tree)) {
@@ -78,8 +89,6 @@ select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
 }
 
 ### MAIN ######################################################################
-
-set.seed(777)
 
 # Load data
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus"))
@@ -98,6 +107,9 @@ top_RoHO_mutations <- homoplasy_nodes_annotated_byMutation %>%
 
 # Function to process each mutation in parallel
 process_mutation <- function(top_mutation) {
+ 
+  # Set random seed for each mutation
+  set.seed(777 + top_mutation)
   
   message(paste0("Processing mutation ", top_mutation))
   
@@ -159,11 +171,14 @@ process_mutation <- function(top_mutation) {
   sigma <- sd(random_RoHO_values)
   pvalue <- gaussfunc(real_RoHO, mu = mu, sigma = sigma)
   
+  message(paste0("Mutation ", top_mutation, " processed!"))
+  
   return(list(pvalue = pvalue, n_nodes = n_nodes))
 }
 
 # Run the main process in parallel for each mutation
-results <- mclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 12)
+results <- mclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 8,
+                     mc.preschedule = FALSE)
 
 # Extract results into final table
 top_RoHO_mutations$pvalue <- sapply(results, function(x) x$pvalue)

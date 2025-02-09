@@ -2,6 +2,9 @@ library(ggplot2)
 library(patchwork)
 library(dplyr)
 library(viridis)
+library(plotly)
+library(hrbrthemes)
+
 
 load("../data/homoplasy_mutations.rda")
 load("../data/homoplasy_mutations_norm.rda")
@@ -61,20 +64,31 @@ raw_boxplot <- homoplasy_nodes_annotated_byMutation %>%
 
 
 # N Nodes Vs RoHO
-load("../data/top_RoHO_mutations.rda")
+load("../data/top_RoHO_mutations_v2.0.rda")
 load("../data/homoplasy_mutations.rda")
 load("../data/n_nodes_per_homoplasy.rda")
 
 data <- homoplasy_nodes_annotated_byMutation %>%
   left_join(n_homoplasy_nodes, by = "mutation")
 
-data %>%
+scatter_nodes_RoHO_all <- data %>%
   ggplot(aes(x = n_nodes, y = RoHO)) +
-  geom_point(alpha = 0.8, size = 1) +
-  geom_point(data = top_RoHO_mutations, aes(x = n_nodes, y = RoHO, color = pvalue <= 0.05)) +
-  scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
-  geom_hline(yintercept = min(top_RoHO_mutations$RoHO),
-             linetype = "dashed",
-             color = "blue",
-             alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 100))
+  geom_point(color = "#69b3a2", alpha = 0.8, size = 1) +
+  geom_point(data = top_RoHO_mutations %>% filter(pvalue <= 0.05), color = "#B3697A", alpha = 0.8,size = 1) +
+  ggtitle("Relation between number of nodes per mutation and RoHO value") + 
+  xlab("Number of nodes per mutation") +
+  ylab("RoHO")
+
+scatter_nodes_RoHO_top <- top_RoHO_mutations %>%
+  ggplot(aes(x = n_nodes, y = RoHO)) +
+  geom_point(color = "#69b3a2", alpha = 0.8, size = 1) +
+  geom_point(data = top_RoHO_mutations %>% filter(pvalue <= 0.05),  color = "#B3697A", alpha = 0.8,size = 1) +
+  ggtitle("Relation between number of nodes per mutation and RoHO value") + 
+  xlab("Number of nodes per mutation") +
+  ylab("RoHO")
+
+
+ggplotly(scatter_nodes_RoHO_all, tooltip = "text")
+ggplotly(scatter_nodes_RoHO_top, tooltip = "text")
+
+
