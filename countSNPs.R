@@ -3,7 +3,7 @@ library(dplyr)
 library(parallel)
 
 # Load SNP table
-snp_table <- fread("../data/SNP_table_resis.txt")
+snp_table <- fread("../data/SNP_table.txt")
 
 snp_table_mutations <- snp_table %>%
   mutate(Mutation = paste0(WT, Position, ALT)) %>%
@@ -13,7 +13,7 @@ snps <- snp_table_mutations$Mutation
 
 
 # Load mutation table (ancestral_result -> result_tree)
-load("../data/ancestral_result_resis.rda")
+load("../data/ancestral_result.rda")
 result_tree_resis <- result_tree_resis %>%
   select(node, label, ref_mutation_position)
 # List with mutations for each node
@@ -40,4 +40,4 @@ binary_table <- as.data.frame(do.call(rbind, binary_table))
 # Sum of the total of nodes containing each mutation
 snp_count <- colSums(binary_table)
 names(snp_count) <- snps
-save(snp_count, file = "../data/SNP_count_resis.rda")
+save(snp_count, file = "../data/SNP_count.rda")

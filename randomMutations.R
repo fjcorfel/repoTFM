@@ -1,6 +1,6 @@
 library(dplyr)
 library(parallel)
-library(pbapply)   # Progress bar for parallel loops
+library(pbapply)
 library(phangorn)
 library(phytools)
 library(rvmethod)
