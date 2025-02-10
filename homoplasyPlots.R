@@ -90,5 +90,3 @@ scatter_nodes_RoHO_top <- top_RoHO_mutations %>%
 
 ggplotly(scatter_nodes_RoHO_all, tooltip = "text")
 ggplotly(scatter_nodes_RoHO_top, tooltip = "text")
-
-
