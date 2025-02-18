@@ -6,21 +6,20 @@ load("../data/homoplasy_nodes_resis.rda")
 load("../data/homoplasy_nodes_noresis.rda")
 
 # Merge resis and noresis homoplasy nodes
-homoplasy_nodes <- rbind(homoplasy_nodes, homoplasy_nodes_resis)
+homoplasy_nodes <- bind_rows(homoplasy_nodes_noresis, homoplasy_nodes_resis)
 save(homoplasy_nodes, file = "../data/homoplasy_nodes.rda")
+fwrite(homoplasy_nodes, file = "../data/homoplasy_nodes.csv")
 
 # Anotate mutations
-print("Annotating mutations...")
-
 # Read SNP table (complete version)
-snp_table <- as_tibble(fread("../data/SNP_table.txt"))
+snp_table <- as_tibble(fread("../data/SNP_table_final_redundant.txt"))
 snp_table <- snp_table %>%
   select(Position, WT, ALT, Synonym, Rv_number) %>%
   mutate(Mutation = paste0(WT, Position, ALT)) %>%
   select(Mutation, Synonym, Rv_number)
 
 # Add gene names and Rv number 
-homoplasy_nodes_annotated <- homoplasy_nodes %>%
+homoplasy_nodes <- homoplasy_nodes %>%
   mutate(
     synonym = snp_table$Synonym[match(mutation, snp_table$Mutation)],
     Rv_number = snp_table$Rv_number[match(mutation, snp_table$Mutation)]
@@ -35,11 +34,16 @@ homoplasy_nodes_annotated <- homoplasy_nodes %>%
     n_wt_alleles,
     RoHO)
 
+homoplasy_nodes <- homoplasy_nodes %>%
+  mutate(synonym = na_if(synonym, "")) %>%
+  mutate(synonym = na_if(synonym, "-"))
+
 # Save results
-save(homoplasy_nodes_annotated, file = "../data/homoplasy_nodes_annotated.rda")
+save(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.rda")
+fwrite(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.csv")
 
 # Group by mutation
-homoplasy_nodes_annotated_byMutation <- homoplasy_nodes_annotated %>%
+homoplasy_mutations <- homoplasy_nodes %>%
   group_by(mutation) %>%
   summarise(
     n_mut_alleles = sum(n_mut_alleles),
@@ -60,10 +64,16 @@ homoplasy_nodes_annotated_byMutation <- homoplasy_nodes_annotated %>%
   ) %>%
   ungroup()
 
-save(homoplasy_nodes_annotated_byMutation, file = "../data/homoplasy_mutations.rda")
+homoplasy_mutations <- homoplasy_mutations %>%
+  mutate(synonym = na_if(synonym, "")) %>%
+  mutate(synonym = na_if(synonym, "-"))
+
+
+save(homoplasy_mutations, file = "../data/homoplasy_mutations.rda")
+fwrite(homoplasy_mutations, file = "../data/homoplasy_mutations.csv")
 
 # Group by gene
-homoplasy_nodes_annotated_byGene <- homoplasy_nodes_annotated %>%
+homoplasy_genes <- homoplasy_nodes %>%
   group_by(Rv_number) %>%
   summarise(
     n_mut_alleles = sum(n_mut_alleles),
@@ -82,4 +92,8 @@ homoplasy_nodes_annotated_byGene <- homoplasy_nodes_annotated %>%
   ) %>%
   ungroup()
 
-save(homoplasy_nodes_annotated_byGene, file = "../data/homoplasy_genes.rda")
+homoplasy_genes <- homoplasy_genes %>%
+  mutate(synonym = na_if(synonym, "")) %>%
+  mutate(synonym = na_if(synonym, "-"))
+
+save(homoplasy_genes, file = "../data/homoplasy_genes.rda")
