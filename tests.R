@@ -3,13 +3,16 @@ library(data.table)
 
 load("../data/homoplasy_mutations.rda")
 load("../data/homoplasy_nodes.rda")
-snp_table <- fread("../data/SNP_table.txt")
+snp_table <- fread("../data/SNP_table_final_redundant.txt")
 
 ### Mutation Ranking ###
 
-ordered_df <- homoplasy_nodes_annotated_byMutation %>%
+ordered_df <- homoplasy_mutations %>%
   select(mutation, synonym ,Rv_number, RoHO) %>%
   arrange(desc(RoHO))
+
+# Remove mutations without annotation
+ordered_df <- ordered_df %>% filter(!is.na(Rv_number))
 
 mutations <- ordered_df$mutation
 synonyms <- ordered_df$synonym
@@ -34,12 +37,12 @@ ranking_results$adj_pvalue_Bonf <- p.adjust(ranking_results$pvalue,
 ranking_results$adj_pvalue_BH <- p.adjust(ranking_results$pvalue,
                                           method = "BH")
 
-save(ranking_results, file = "ranking_results.rda")
+save(ranking_results, file = "../data/ranking_results.rda")
 
 
 ### Paper Strategy ###
 
-tt_results <- homoplasy_nodes_annotated_byMutation %>%
+tt_results <- homoplasy_mutations %>%
   group_by(Rv_number) %>%
   summarise(
     n_mutations = n(),
@@ -55,7 +58,7 @@ tt_results <- homoplasy_nodes_annotated_byMutation %>%
   select(synonym, Rv_number, n_mutations, pvalue)
 
 
-wilcox_results <- homoplasy_nodes_annotated_byMutation %>%
+wilcox_results <- homoplasy_mutations %>%
   group_by(Rv_number) %>%
   summarise(
     n_mutations = n(),
@@ -104,7 +107,9 @@ wilcox_results$adj_pvalue_BH <- p.adjust(wilcox_results$pvalue, method = "BH")
 wilcox_results <- wilcox_results %>%
   rename(wilcox_pvalue = pvalue,
          wilcox_adj_pvalue_Bonf = adj_pvalue_Bonf,
-         wilcox_adj_pvalue_BH = adj_pvalue_BH)
+         wilcox_adj_pvalue_BH = adj_pvalue_BH) %>%
+  select(wilcox_pvalue, wilcox_adj_pvalue_Bonf, wilcox_adj_pvalue_BH)
 
-save(tt_results, file = "tt_results.rda")
-save(wilcox_results, file = "wilcox_results.rda")
+tt_wilcox_results <- bind_cols(tt_results, wilcox_results)
+
+save(tt_wilcox_results, file = "../data/tt_wilcox_results.rda")

@@ -1,10 +1,11 @@
 library(dplyr)
 library(parallel)
-library(pbapply)
+library(pbmcapply)
 library(phangorn)
 library(phytools)
 library(rvmethod)
 library(ggplot2)
+library(data.table)
 
 ### PRE PROCESSING ############################################################
 
@@ -92,29 +93,28 @@ select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
 
 # Load data
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus"))
+snp_count <- fread("../data/SNP_count.csv")
 load("../data/tree_tibble.rda")
+tree_tibble <- as_tibble(tree_tibble)
 load("../data/homoplasy_mutations.rda")
 load("../data/n_node_tips.rda")
 load("../data/n_sister_tips.rda")
 load("../data/sisters.rda")
-load("../data/SNP_count.rda")
 load("../data/homoplasy_nodes.rda")
 
 # Select mutations of interest (RoHO > 1)
-top_RoHO_mutations <- homoplasy_nodes_annotated_byMutation %>%
+top_RoHO_mutations <- homoplasy_mutations %>%
   arrange(desc(RoHO)) %>%
-  filter(RoHO > 1)
+  filter(RoHO > 1) %>%
+  slice(201:250)
 
 # Function to process each mutation in parallel
 process_mutation <- function(top_mutation) {
- 
-  # Set random seed for each mutation
-  set.seed(777 + top_mutation)
   
   message(paste0("Processing mutation ", top_mutation))
   
   homoplasy <- top_RoHO_mutations$mutation[[top_mutation]]
-  n_appearances <- unname(snp_count[homoplasy])
+  n_appearances <- snp_count$count[which(snp_count$mutation == homoplasy)]
   real_RoHO <- top_RoHO_mutations$RoHO[[top_mutation]]
   
   original_mutation_nodes <- homoplasy_nodes %>%
@@ -176,13 +176,17 @@ process_mutation <- function(top_mutation) {
   return(list(pvalue = pvalue, n_nodes = n_nodes))
 }
 
+
+set.seed(777)
 # Run the main process in parallel for each mutation
-results <- mclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 8,
-                     mc.preschedule = FALSE)
+results <- pbmclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 8,
+                     mc.preschedule = FALSE, mc.set.seed = TRUE)
 
 # Extract results into final table
 top_RoHO_mutations$pvalue <- sapply(results, function(x) x$pvalue)
 top_RoHO_mutations$n_nodes <- sapply(results, function(x) x$n_nodes)
 
+random_permutation_results <- top_RoHO_mutations
+
 # Save results
-save(top_RoHO_mutations, file = "../data/top_RoHO_mutations_v2.0.rda")
+save(random_permutation_results, file = "../data/random_permutation_results_201-250.rda")
