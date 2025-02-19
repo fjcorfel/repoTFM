@@ -93,20 +93,20 @@ select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
 
 # Load data
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus"))
-snp_count <- fread("../data/SNP_count.csv")
+snp_count <- fread("../data/SNP_count_fixed.csv")
 load("../data/tree_tibble.rda")
 tree_tibble <- as_tibble(tree_tibble)
 load("../data/homoplasy_mutations.rda")
 load("../data/n_node_tips.rda")
 load("../data/n_sister_tips.rda")
 load("../data/sisters.rda")
-load("../data/homoplasy_nodes.rda")
+load("../data/homoplasy_nodes_fixed.rda")
 
 # Select mutations of interest (RoHO > 1)
 top_RoHO_mutations <- homoplasy_mutations %>%
   arrange(desc(RoHO)) %>%
   filter(RoHO > 1) %>%
-  slice(201:250)
+  slice(1:50)
 
 # Function to process each mutation in parallel
 process_mutation <- function(top_mutation) {
@@ -189,4 +189,5 @@ top_RoHO_mutations$n_nodes <- sapply(results, function(x) x$n_nodes)
 random_permutation_results <- top_RoHO_mutations
 
 # Save results
-save(random_permutation_results, file = "../data/random_permutation_results_201-250.rda")
+save(random_permutation_results,
+     file = "../data/random_permutations/random_permutation_results_1-50.rda")

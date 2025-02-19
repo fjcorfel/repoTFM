@@ -10,7 +10,7 @@ library(stringr)
 ### FILTER SNPS ###
 
 # Load SNP count
-snp_count <- fread("../data/SNP_count_noresis.csv")
+snp_count <- fread("../data/SNP_count_noresis_fixed.csv")
 # Filter SNPs that appear at least 5 times
 filtered_mutations <- snp_count[count >= 5]
 
@@ -23,10 +23,8 @@ tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus")
 
 # Load tree nodes and their associated mutations -> tibble
 print("Loading ancestral nodes and mutations...")
-load("../data/ancestral_result_noresis.rda")                 # result_tree
-# Convert to tibble for more efficient dplyr manipulation
-result_tree <- as_tibble(result_tree) %>%
-  select(node, parent, label, ref_mutation_position)
+result_tree <- fread("../data/ancestral_result_noresis_fixed.csv")
+result_tree[, ref_mutation_position := strsplit(ref_mutation_position, "\\|")]
 
 print("Inputs loaded.")
 
@@ -168,6 +166,6 @@ print("Processing complete.")
 
 # Save the final result
 print("Saving results...")
-save(homoplasy_nodes_noresis, file = "../data/homoplasy_nodes_noresis.rda")
+save(homoplasy_nodes_noresis, file = "../data/homoplasy_nodes_noresis_fixed.rda")
 
 print("HomoplasyFinder has finished!")

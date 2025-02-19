@@ -1,28 +1,26 @@
 library(dplyr)
 library(data.table)
+library(stringr)
 
 # Load homoplasy nodes (resis and noresis)
-load("../data/homoplasy_nodes_resis.rda")
-load("../data/homoplasy_nodes_noresis.rda")
+load("../data/homoplasy_nodes_resis_fixed.rda")
+load("../data/homoplasy_nodes_noresis_fixed.rda")
 
 # Merge resis and noresis homoplasy nodes
 homoplasy_nodes <- bind_rows(homoplasy_nodes_noresis, homoplasy_nodes_resis)
-save(homoplasy_nodes, file = "../data/homoplasy_nodes.rda")
-fwrite(homoplasy_nodes, file = "../data/homoplasy_nodes.csv")
+save(homoplasy_nodes, file = "../data/homoplasy_nodes_fixed.rda")
 
 # Anotate mutations
 # Read SNP table (complete version)
 snp_table <- as_tibble(fread("../data/SNP_table_final_redundant.txt"))
 snp_table <- snp_table %>%
-  select(Position, WT, ALT, Synonym, Rv_number) %>%
-  mutate(Mutation = paste0(WT, Position, ALT)) %>%
-  select(Mutation, Synonym, Rv_number)
+  select(Position, Synonym, Rv_number)
 
 # Add gene names and Rv number 
 homoplasy_nodes <- homoplasy_nodes %>%
   mutate(
-    synonym = snp_table$Synonym[match(mutation, snp_table$Mutation)],
-    Rv_number = snp_table$Rv_number[match(mutation, snp_table$Mutation)]
+    synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
+    Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
   ) %>%
   select(
     node,
@@ -40,7 +38,7 @@ homoplasy_nodes <- homoplasy_nodes %>%
 
 # Save results
 save(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.rda")
-fwrite(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.csv")
+
 
 # Group by mutation
 homoplasy_mutations <- homoplasy_nodes %>%
@@ -51,8 +49,8 @@ homoplasy_mutations <- homoplasy_nodes %>%
     RoHO = n_mut_alleles / n_wt_alleles
   ) %>%
   mutate(
-    synonym = snp_table$Synonym[match(mutation, snp_table$Mutation)],
-    Rv_number = snp_table$Rv_number[match(mutation, snp_table$Mutation)]
+    synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
+    Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
   ) %>%
   select(
     mutation,
@@ -70,7 +68,7 @@ homoplasy_mutations <- homoplasy_mutations %>%
 
 
 save(homoplasy_mutations, file = "../data/homoplasy_mutations.rda")
-fwrite(homoplasy_mutations, file = "../data/homoplasy_mutations.csv")
+
 
 # Group by gene
 homoplasy_genes <- homoplasy_nodes %>%
