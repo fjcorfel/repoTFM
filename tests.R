@@ -2,7 +2,7 @@ library(dplyr)
 library(data.table)
 
 load("../data/homoplasy_mutations.rda")
-load("../data/homoplasy_nodes_fixed.rda")
+load("../data/homoplasy_nodes.rda")
 snp_table <- fread("../data/SNP_table_final_redundant.txt")
 
 ### Mutation Ranking ###

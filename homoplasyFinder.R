@@ -10,7 +10,7 @@ library(stringr)
 ### FILTER SNPS ###
 
 # Load SNP count
-snp_count <- fread("../data/SNP_count_noresis_fixed.csv")
+snp_count <- fread("../data/SNP_count_resis.csv")
 # Filter SNPs that appear at least 5 times
 filtered_mutations <- snp_count[count >= 5]
 
@@ -19,11 +19,11 @@ filtered_mutations <- snp_count[count >= 5]
 
 # Load tree -> phylo object
 print("Loading tree...")
-tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus")) 
+tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_resis.nexus")) 
 
 # Load tree nodes and their associated mutations -> tibble
 print("Loading ancestral nodes and mutations...")
-result_tree <- fread("../data/ancestral_result_noresis_fixed.csv")
+result_tree <- fread("../data/ancestral_result_resis_fixed.csv")
 result_tree[, ref_mutation_position := strsplit(ref_mutation_position, "\\|")]
 
 print("Inputs loaded.")
@@ -58,12 +58,12 @@ check_reversions <- function(node, mutation) {
   descendants <- phangorn::Descendants(tree, node, "all")
   descendant_mutations <- unlist(sapply(descendants, get_node_mutations), use.names = FALSE)
   
-  matches <- str_detect(descendant_mutations, paste0("(?<=\\D)", mutation_position, "(?=\\D)"))
+  matches <- str_detect(descendant_mutations, paste0(mutation_position, "(?=\\D)"))
   return(any(matches))
 }
 
 check_mutations_in_wt <- function(node, mutation) {
-  sister <- phytools::getSisters(tree, node)
+  sister <- phangorn::Siblings(tree, node)
   sister_descendants <- unlist(phangorn::Descendants(tree, sister, "all"))
   sister_descendant_mutations <- unlist(sapply(sister_descendants, get_node_mutations))
   
@@ -157,7 +157,7 @@ homoplasy_nodes <- mclapply(seq_along(filtered_mutations$mutation), function(n_p
 }, mc.cores = 12, mc.preschedule = FALSE)
 
 # Combine df returned by each worker function into a single df
-homoplasy_nodes_noresis <- do.call(rbind, homoplasy_nodes)
+homoplasy_nodes_resis <- do.call(rbind, homoplasy_nodes)
 
 print("Processing complete.")
 
@@ -166,6 +166,6 @@ print("Processing complete.")
 
 # Save the final result
 print("Saving results...")
-save(homoplasy_nodes_noresis, file = "../data/homoplasy_nodes_noresis_fixed.rda")
+save(homoplasy_nodes_resis, file = "../data/homoplasy_nodes_resis.rda")
 
 print("HomoplasyFinder has finished!")

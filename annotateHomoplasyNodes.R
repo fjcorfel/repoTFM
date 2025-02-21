@@ -3,12 +3,19 @@ library(data.table)
 library(stringr)
 
 # Load homoplasy nodes (resis and noresis)
-load("../data/homoplasy_nodes_resis_fixed.rda")
-load("../data/homoplasy_nodes_noresis_fixed.rda")
+load("../data/homoplasy_nodes_resis.rda")
+load("../data/homoplasy_nodes_noresis.rda")
+
+# Fix mutation column
+homoplasy_nodes_noresis <- homoplasy_nodes_noresis %>%
+  mutate(mutation = as.character(mutation$mutation))
+
+homoplasy_nodes_resis <- homoplasy_nodes_resis %>%
+  mutate(mutation = as.character(mutation$mutation))
 
 # Merge resis and noresis homoplasy nodes
 homoplasy_nodes <- bind_rows(homoplasy_nodes_noresis, homoplasy_nodes_resis)
-save(homoplasy_nodes, file = "../data/homoplasy_nodes_fixed.rda")
+save(homoplasy_nodes, file = "../data/homoplasy_nodes.rda")
 
 # Anotate mutations
 # Read SNP table (complete version)
@@ -38,7 +45,7 @@ homoplasy_nodes <- homoplasy_nodes %>%
 
 # Save results
 save(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.rda")
-
+fwrite(homoplasy_nodes, file = "../data/homoplasy_nodes_annotated.csv")
 
 # Group by mutation
 homoplasy_mutations <- homoplasy_nodes %>%
@@ -68,6 +75,7 @@ homoplasy_mutations <- homoplasy_mutations %>%
 
 
 save(homoplasy_mutations, file = "../data/homoplasy_mutations.rda")
+fwrite(homoplasy_mutations, file = "../data/homoplasy_mutations.csv")
 
 
 # Group by gene
@@ -95,3 +103,4 @@ homoplasy_genes <- homoplasy_genes %>%
   mutate(synonym = na_if(synonym, "-"))
 
 save(homoplasy_genes, file = "../data/homoplasy_genes.rda")
+fwrite(homoplasy_genes, file = "../data/homoplasy_genes.csv")

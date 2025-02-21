@@ -4,7 +4,6 @@ library(pbmcapply)
 library(phangorn)
 library(phytools)
 library(rvmethod)
-library(ggplot2)
 library(data.table)
 
 ### PRE PROCESSING ############################################################
@@ -93,20 +92,19 @@ select_nodes <- function(n_nodes, tree, selected_nodes, filtered_nodes) {
 
 # Load data
 tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_noresis.nexus"))
-snp_count <- fread("../data/SNP_count_fixed.csv")
+snp_count <- fread("../data/SNP_count.csv")
 load("../data/tree_tibble.rda")
 tree_tibble <- as_tibble(tree_tibble)
 load("../data/homoplasy_mutations.rda")
 load("../data/n_node_tips.rda")
 load("../data/n_sister_tips.rda")
 load("../data/sisters.rda")
-load("../data/homoplasy_nodes_fixed.rda")
+load("../data/homoplasy_nodes.rda")
 
 # Select mutations of interest (RoHO > 1)
 top_RoHO_mutations <- homoplasy_mutations %>%
   arrange(desc(RoHO)) %>%
-  filter(RoHO > 1) %>%
-  slice(1:50)
+  filter(RoHO > 1)
 
 # Function to process each mutation in parallel
 process_mutation <- function(top_mutation) {
@@ -179,7 +177,7 @@ process_mutation <- function(top_mutation) {
 
 set.seed(777)
 # Run the main process in parallel for each mutation
-results <- pbmclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 8,
+results <- pbmclapply(1:nrow(top_RoHO_mutations), process_mutation, mc.cores = 12,
                      mc.preschedule = FALSE, mc.set.seed = TRUE)
 
 # Extract results into final table
@@ -190,4 +188,4 @@ random_permutation_results <- top_RoHO_mutations
 
 # Save results
 save(random_permutation_results,
-     file = "../data/random_permutations/random_permutation_results_1-50.rda")
+     file = "../data/random_permutation_results.rda")
