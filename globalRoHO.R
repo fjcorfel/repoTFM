@@ -10,6 +10,16 @@ result_tree_resis <- fread("../data/ancestral_result_resis_fixed.csv")
 snp_table <- as_tibble(fread("../data/SNP_table_final_redundant.txt"))
 
 
+check_reversions <- function(node, mutation) {
+  mutation_position <- as.numeric(str_extract(mutation, "\\d+"))
+  descendants <- phangorn::Descendants(tree, node, "all")
+  descendant_mutations <- unlist(sapply(descendants, get_node_mutations), use.names = FALSE)
+  
+  matches <- str_detect(descendant_mutations, paste0(mutation_position, "(?=\\D)"))
+  return(any(matches))
+}
+
+
 # Only with nodes with 4 < n_tips (samples) < 100
 # Calculate n of descendants
 load("../data/n_node_tips.rda")

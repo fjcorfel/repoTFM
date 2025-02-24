@@ -39,7 +39,7 @@ def main() -> None:
     if not res_files: 
         print("No .res found!")
     
-    mutation_table = pd.read_csv("../data/global_RoHO.csv")
+    mutation_table = pd.read_csv("../data/homoplasy_mutations.csv")
     
     # Empty dict for storing mutation annotations
     drug_annotations = {}
@@ -55,7 +55,7 @@ def main() -> None:
     mutation_table["drug"] = mutation_table["mutation"].map(drug_annotations)
     mutation_table["confidence"] = mutation_table["mutation"].map(confidence_annotations)
     
-    mutation_table.to_csv("global_RoHO_resis_annotated.csv", index=False)
+    mutation_table.to_csv("../data/homoplasy_mutations_resis_annotated.csv", index=False)
     
     print("\nProcess finished!")
     
