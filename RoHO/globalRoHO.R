@@ -126,6 +126,7 @@ global_RoHO <- global_RoHO %>%
   mutate(synonym = ifelse(synonym %in% c("", "-"), NA, synonym))
 
 save(global_RoHO, file = "../../data/data_RoHO/global_RoHO.rda")
+fwrite(global_RoHO, file = "../../data/data_RoHO/global_RoHO.csv")
 
 
 
