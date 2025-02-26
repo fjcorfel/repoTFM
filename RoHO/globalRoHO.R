@@ -6,15 +6,15 @@ library(ggplot2)
 library(parallel)
 
 
-result_tree <- fread("../data/ancestral_result.csv")
+result_tree <- fread("../../data/data_RoHO/ancestral_result.csv")
 result_tree <- result_tree %>%
   mutate(mutations = ifelse(mutations == "", NA, strsplit(mutations, "\\|"))) %>%
   as_tibble()
 
-snp_table <- as_tibble(fread("../data/SNP_table_final_redundant.txt"))
-tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_resis.nexus")) 
-load("../data/n_node_tips.rda")
-load("../data/n_sister_tips.rda")
+snp_table <- as_tibble(fread("../../data/data_RoHO/SNP_table_final_redundant.txt"))
+tree <- ape::as.phylo(treeio::read.beast("../../data/data_RoHO/annotated_tree_resis.nexus")) 
+load("../../data/data_RoHO/n_node_tips.rda")
+load("../../data/data_RoHO/n_sister_tips.rda")
 
 
 get_node_mutations <- function(node) {
@@ -103,42 +103,36 @@ global_RoHO_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
 
 global_RoHO_nodes <- do.call(rbind, global_RoHO_nodes)
 
-save(global_RoHO_nodes, file = "../data/global_RoHO_nodes.rda")
+save(global_RoHO_nodes, file = "../../data/data_RoHO/global_RoHO_nodes.rda")
 
-# global_RoHO <- tree_tibble %>%
-#   mutate(n_node_tips = n_node_tips,
-#          n_sister_tips = n_sister_tips) %>%
-#   filter(n_node_tips > 4 & n_node_tips < 100) %>%
-#   mutate(RoHO = n_node_tips / n_sister_tips) %>%
-#   mutate(mutations = ifelse(
-#     result_tree_noresis$ref_mutation_position[match(node, result_tree_noresis$node)] != "",
-#     result_tree_noresis$ref_mutation_position[match(node, result_tree_noresis$node)],
-#     result_tree_resis$ref_mutation_position[match(node, result_tree_resis$node)]
-#   )) %>%
-#   filter(mutations != "") %>%
-#   separate_rows(mutations, sep = "\\|") %>%
-#   rename(mutation = mutations) %>%
-#   group_by(mutation) %>%
-#   summarise(
-#     n_node_tips = sum(n_node_tips),
-#     n_sister_tips = sum(n_sister_tips),
-#     RoHO = n_node_tips / n_sister_tips
-#   ) %>%
-#   mutate(
-#     synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
-#     Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
-#   ) %>%
-#   select(
-#     mutation, synonym, Rv_number, n_node_tips, n_sister_tips, RoHO
-#   )
-# 
-# save(global_RoHO, file = "../data/global_RoHO.rda")
-# fwrite(global_RoHO, file = "../data/global_RoHO.csv")
-# 
-# histogram <- global_RoHO %>%
-#   ggplot(aes(x = log2(RoHO))) +
-#   geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
-#   geom_vline(xintercept = 0, linetype = "dashed", color = "black", alpha = 0.4) +
-#   ggtitle("Distribution of RoHO values")
-# 
-# histogram
+global_RoHO <- global_RoHO_nodes %>%
+  na.omit() %>%
+  group_by(mutation) %>%
+  summarise(
+    n_node_tips = sum(n_node_tips),
+    n_sister_tips = sum(n_sister_tips),
+    RoHO = n_node_tips / n_sister_tips
+  ) %>%
+  mutate(
+    synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
+    Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
+  ) %>%
+  select(
+    mutation, synonym, Rv_number, n_node_tips, n_sister_tips, RoHO
+  ) %>%
+  ungroup()
+
+global_RoHO <- global_RoHO %>%
+  mutate(synonym = ifelse(synonym %in% c("", "-"), NA, synonym))
+
+save(global_RoHO, file = "../../data/data_RoHO/global_RoHO.rda")
+
+
+
+histogram <- global_RoHO %>%
+  ggplot(aes(x = log2(RoHO))) +
+  geom_density(fill="#69b3a2", color="#e9ecef", alpha=0.8) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", alpha = 0.4) +
+  ggtitle("Distribution of RoHO values")
+
+histogram
