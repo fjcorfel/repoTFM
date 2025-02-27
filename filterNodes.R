@@ -5,6 +5,14 @@ library(phangorn)
 library(parallel)
 library(stringr)
 
+
+DATASET <- "vietnam"
+DATASET_SIZE <- switch (DATASET,
+  "malawi" = 1840,
+  "vietnam" = 1504
+)
+
+
 ### FUNCTIONS -----------------------------------------------------------------
 
 get_node_mutations <- function(node) {
@@ -62,13 +70,13 @@ test_branch_lengths <- function(node) {
 
 ### INPUTS --------------------------------------------------------------------
 
-DATASET_SIZE <- 1840
-
 # Load tree (nwk)
-tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
+tree <- ape::as.phylo(treeio::read.beast(paste0("../data/", DATASET, "/", "annotated_tree.nexus"))) 
+
 
 # Load annotated_tree_cleaned (mutations per node)
-annotated_tree <- fread('../data/annotated_tree_cleaned.csv') %>%
+
+annotated_tree <- fread(paste0("../data/", DATASET, "/", "annotated_tree_cleaned.csv")) %>%
   as_tibble() %>%
   mutate(mutations = strsplit(mutations, '\\|')) %>%
   rowwise() %>%
@@ -77,15 +85,16 @@ annotated_tree <- fread('../data/annotated_tree_cleaned.csv') %>%
   filter((n_tips >= 2 & n_tips <= (DATASET_SIZE / 10)) & 
            (n_sibling_tips >= 2 & n_sibling_tips <= (DATASET_SIZE / 10))) %>%
   ungroup()
-  
 
 # Load annotated_tree (branch length per node)
-nodes_branch_length <- fread('../data/annotated_tree.csv') %>%
+
+nodes_branch_length <- fread(paste0("../data/", DATASET, "/", "annotated_tree.csv")) %>%
   select(node, branch.length) %>%
   as_tibble()
 
 # Select mutations with more than 1 appearence
-snp_count <- fread('../data/SNP_count.csv') %>%
+
+snp_count <- fread(paste0("../data/", DATASET, "/", "SNP_count.csv")) %>%
   filter(count > 1)
 mutations <- snp_count$mutation
 
@@ -154,7 +163,7 @@ final_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
     return(NULL)
   })
   
-}, mc.cores = 8, mc.preschedule = FALSE)
+}, mc.cores = 10, mc.preschedule = FALSE)
 
 final_nodes <- do.call(rbind, final_nodes)
 
