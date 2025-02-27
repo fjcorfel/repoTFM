@@ -64,8 +64,19 @@ test_branch_lengths <- function(node) {
   mutant_branch_lengths <- sapply(node_tips, get_node_branch_length)
   wt_branch_lengths <- sapply(sibling_tips, get_node_branch_length)
   
-  results <- t.test(mutant_branch_lengths, wt_branch_lengths, alternative = "less")
-  return(results$p.value)
+  # This block handles constant data error in t.test
+  # This error happens when there is not branch length variation
+  results <- tryCatch({
+    t.test(mutant_branch_lengths, wt_branch_lengths, alternative = "less")
+  }, error = function(e) {
+    return(NA)
+  })
+  
+  if (inherits(results, "htest")) {
+    return(results$p.value)
+  } else {
+    return(NA)
+  }
 }
 
 ### INPUTS --------------------------------------------------------------------
@@ -167,6 +178,8 @@ final_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
 
 final_nodes <- do.call(rbind, final_nodes)
 
+fwrite(final_nodes, file = paste0("../data/", DATASET, "/", "final_nodes_", DATASET, ".csv"))
+
 # Group by mutation
 final_mutations <- final_nodes %>%
   drop_na() %>%
@@ -176,3 +189,4 @@ final_mutations <- final_nodes %>%
             significant_ratio = sum(ttest_adj_pvalue_BH <= 0.05) / n()) %>%
   ungroup()
   
+fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_", DATASET, ".csv"))
