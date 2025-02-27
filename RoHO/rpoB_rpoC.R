@@ -2,8 +2,8 @@ library(dplyr)
 library(phangorn)
 library(phytools)
 
-load("../data/homoplasy_nodes_annotated.rda")
-tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree_resis.nexus")) 
+load("../../data/data_RoHO/homoplasy_nodes_annotated.rda")
+tree <- ape::as.phylo(treeio::read.beast("../../data/data_RoHO/annotated_tree_resis.nexus")) 
 
 rpoB_nodes <- homoplasy_nodes %>%
   filter(synonym == "rpoB") %>%

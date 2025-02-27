@@ -1,35 +1,9 @@
 library(data.table)
 library(dplyr)
+library(tidyr)
 library(phangorn)
-
-
-### INPUTS --------------------------------------------------------------------
-
-DATASET_SIZE <- 1840
-
-# Load tree (nwk)
-tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
-
-# Load annotated_tree_cleaned (mutations per node)
-annotated_tree <- fread('../data/annotated_tree_cleaned.csv') %>%
-  as_tibble() %>%
-  mutate(mutations = strsplit(mutations, '\\|')) %>%
-  rowwise() %>%
-  mutate(n_tips = calculate_n_tips(node)) %>%
-  filter(n_tips >= 2 & n_tips <= (DATASET_SIZE / 10)) %>%
-  ungroup()
-  
-
-# Load annotated_tree (branch length per node)
-nodes_branch_length <- fread('../data/annotated_tree.csv') %>%
-  select(node, branch.length) %>%
-  as_tibble()
-
-# Select mutations with more than 1 appearence
-snp_count <- fread('../data/SNP_count.csv') %>%
-  filter(count > 1)
-mutations <- snp_count$mutation
-
+library(parallel)
+library(stringr)
 
 ### FUNCTIONS -----------------------------------------------------------------
 
@@ -64,7 +38,59 @@ calculate_n_tips <- function(node) {
   return(length(tips))
 }
 
+calculate_n_sibling_tips <- function(node) {
+  siblings <- unlist(phangorn::Siblings(tree, node))
+  sibling_tips <- unlist(phangorn::Descendants(tree, siblings, "tips"))
+  return(length(sibling_tips))
+}
 
+get_node_branch_length <- function(node) {
+  node_branch_length <- nodes_branch_length[[node, "branch.length"]]
+}
+
+test_branch_lengths <- function(node) {
+  node_tips <- unlist(phangorn::Descendants(tree, node, "tips"))
+  siblings <- unlist(phangorn::Siblings(tree, node))
+  sibling_tips <- unlist(phangorn::Descendants(tree, siblings, "tips"))
+  
+  mutant_branch_lengths <- sapply(node_tips, get_node_branch_length)
+  wt_branch_lengths <- sapply(sibling_tips, get_node_branch_length)
+  
+  results <- t.test(mutant_branch_lengths, wt_branch_lengths, alternative = "less")
+  return(results$p.value)
+}
+
+### INPUTS --------------------------------------------------------------------
+
+DATASET_SIZE <- 1840
+
+# Load tree (nwk)
+tree <- ape::as.phylo(treeio::read.beast("../data/annotated_tree.nexus")) 
+
+# Load annotated_tree_cleaned (mutations per node)
+annotated_tree <- fread('../data/annotated_tree_cleaned.csv') %>%
+  as_tibble() %>%
+  mutate(mutations = strsplit(mutations, '\\|')) %>%
+  rowwise() %>%
+  mutate(n_tips = calculate_n_tips(node),
+         n_sibling_tips = calculate_n_sibling_tips(node)) %>%
+  filter((n_tips >= 2 & n_tips <= (DATASET_SIZE / 10)) & 
+           (n_sibling_tips >= 2 & n_sibling_tips <= (DATASET_SIZE / 10))) %>%
+  ungroup()
+  
+
+# Load annotated_tree (branch length per node)
+nodes_branch_length <- fread('../data/annotated_tree.csv') %>%
+  select(node, branch.length) %>%
+  as_tibble()
+
+# Select mutations with more than 1 appearence
+snp_count <- fread('../data/SNP_count.csv') %>%
+  filter(count > 1)
+mutations <- snp_count$mutation
+
+
+### MAIN PROCESSING -----------------------------------------------------------
 
 # Iterate over mutations
 process_mutation <- function(n_mutation) {
@@ -79,14 +105,6 @@ process_mutation <- function(n_mutation) {
   nodes <- annotated_tree %>%
     rowwise() %>%
     filter(mutation %in% unlist(mutations)) %>%
-    mutate(
-      has_reversion = check_reversions(node, mutation),
-      has_mutation_in_wt = check_mutations_in_wt(node, mutation)
-    ) %>%
-    filter(
-      !has_reversion,
-      !has_mutation_in_wt
-    ) %>%
     ungroup()
   
   # Verify that nodes are not empty
@@ -94,22 +112,58 @@ process_mutation <- function(n_mutation) {
     return(tibble(node=integer(), mutation=character(),branch_length=character()))
   }
   
-  final_nodes <- nodes %>%
+  nodes <- nodes %>%
+    rowwise() %>%
+    mutate(
+      has_reversion = check_reversions(node, mutation),
+      has_mutation_in_wt = check_mutations_in_wt(node, mutation)
+    ) %>%
+    ungroup() %>%
+    filter(
+      !has_reversion,
+      !has_mutation_in_wt
+    ) 
+  
+  # Verify that nodes are not empty
+  if (nrow(nodes) == 0) {
+    return(tibble(node=integer(), mutation=character(),branch_length=character()))
+  }
+  
+  # Hacer aquí el cálculo
+  # Sacar las longitudes de tips mutantes y tips wt
+  # Hacer t.test entre ambos vectores -> guardar pvalor
+  filtered_nodes <- nodes %>%
     mutate(mutation = mutation) %>%
-    select(node, mutation, branch.length)
+    rowwise() %>%
+    mutate(ttest_pvalue = test_branch_lengths(node)) %>%
+    ungroup() %>%
+    mutate(ttest_adj_pvalue_Bonf = p.adjust(ttest_pvalue, method = "bonferroni"),
+           ttest_adj_pvalue_BH = p.adjust(ttest_pvalue, method = "BH")) %>%
+    select(node, mutation, ttest_pvalue, ttest_adj_pvalue_Bonf, ttest_adj_pvalue_BH)
   
-  #? Lo que nosotros queremos es la longitud de rama de las tips
-  
-  return(final_nodes)
+  return(filtered_nodes)
   
 }
 
-filtered_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
-  process_mutation(n_mutation)
+final_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
+  tryCatch({
+    process_mutation(n_mutation)
+  }, error = function(e) {
+    write(paste("Error en mutación:", mutations[n_mutation], "->", conditionMessage(e)),
+          file = "error_log.txt", append = TRUE)
+    return(NULL)
+  })
+  
 }, mc.cores = 8, mc.preschedule = FALSE)
 
-filtered_nodes <- do.call(rbind, filtered_nodes)
+final_nodes <- do.call(rbind, final_nodes)
 
-#?
-# Get node tips and their branch length
-# Get sister tips and their branch length
+# Group by mutation
+final_mutations <- final_nodes %>%
+  drop_na() %>%
+  group_by(mutation) %>%
+  summarise(adj_pvalues = list(ttest_adj_pvalue_BH),
+            n = n(),
+            significant_ratio = sum(ttest_adj_pvalue_BH <= 0.05) / n()) %>%
+  ungroup()
+  
