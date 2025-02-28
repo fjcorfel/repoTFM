@@ -5,14 +5,14 @@ import re
 import glob
     
 
-def annotate_mutation(mutation, res_files) -> dict:
+def annotate_mutation(mutation, res_files_path) -> dict:
     # Extract mutation position
     print(f"Annotating mutation {mutation}")
     mutation_position = re.findall(r"\d+", mutation)[0]
 
     # Grep cmd to find position across .res files
-    grep_cmd = ["grep", "-wh", mutation_position] + res_files
-    process = subprocess.run(grep_cmd, capture_output=True, text=True)
+    grep_cmd = f"grep -wh {mutation_position} {res_files_path}"
+    process = subprocess.run(grep_cmd, shell=True, capture_output=True, text=True)
     
     # Convert output to df
     output = process.stdout
@@ -35,9 +35,7 @@ def annotate_mutation(mutation, res_files) -> dict:
     
 
 def main() -> None:
-    res_files: list = glob.glob("../../data_RoHO/res_files/*.res")
-    if not res_files: 
-        print("No .res found!")
+    res_files_path: str = "../../data_RoHO/res_files/*.res"
     
     mutation_table = pd.read_csv("../../data_RoHO/global_RoHO.csv")
     
@@ -47,7 +45,7 @@ def main() -> None:
     
     # Annotate each of the mutations
     for mutation in mutation_table["mutation"].to_list():
-        annotation = annotate_mutation(mutation, res_files)
+        annotation = annotate_mutation(mutation, res_files_path)
         
         drug_annotations[mutation] = annotation["drug"]
         confidence_annotations[mutation] = annotation["confidence"]
