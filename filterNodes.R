@@ -86,7 +86,6 @@ tree <- ape::as.phylo(treeio::read.beast(paste0("../data/", DATASET, "/", "annot
 
 
 # Load annotated_tree_cleaned (mutations per node)
-
 annotated_tree <- fread(paste0("../data/", DATASET, "/", "annotated_tree_cleaned.csv")) %>%
   as_tibble() %>%
   mutate(mutations = strsplit(mutations, '\\|')) %>%
@@ -98,17 +97,18 @@ annotated_tree <- fread(paste0("../data/", DATASET, "/", "annotated_tree_cleaned
   ungroup()
 
 # Load annotated_tree (branch length per node)
-
 nodes_branch_length <- fread(paste0("../data/", DATASET, "/", "annotated_tree.csv")) %>%
   select(node, branch.length) %>%
   as_tibble()
 
 # Select mutations with more than 1 appearence
-
 snp_count <- fread(paste0("../data/", DATASET, "/", "SNP_count.csv")) %>%
   filter(count > 1)
 mutations <- snp_count$mutation
 
+# Load SNP table for gene annotation
+
+snp_table <- fread(paste0("../data/", DATASET, "/", "SNP_table_final.txt"))
 
 ### MAIN PROCESSING -----------------------------------------------------------
 
@@ -188,5 +188,11 @@ final_mutations <- final_nodes %>%
             n = n(),
             significant_ratio = sum(ttest_adj_pvalue_BH <= 0.05) / n()) %>%
   ungroup()
+
+final_mutations <- final_mutations %>%
+  mutate(
+    synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
+    Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
+  )
   
 fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_", DATASET, ".csv"))

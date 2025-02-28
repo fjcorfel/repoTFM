@@ -52,10 +52,11 @@ violin + boxplot + plot_annotation(title = "Distribution of RoHO values")
 #------------------------------------------------------------------------------
 
 # Global RoHO distribution
-mutations <- fread("../data/global_RoHO_resis_annotated.csv")
+mutations <- fread("../../data_RoHO/global_RoHO_resis_annotated.csv")
 
 mutations <- mutations %>%
-  mutate(resis_annotation = if_else(str_detect(confidence, "Assoc w R"), "Resistance", "No resistance"))
+  mutate(resis_annotation = if_else(
+    is.na(confidence) | !str_detect(confidence, "Assoc w R"), "No resistance", "Resistance"))
 
 
 global_violin <- mutations %>%
