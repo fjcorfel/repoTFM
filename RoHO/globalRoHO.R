@@ -5,14 +5,14 @@ library(stringr)
 library(parallel)
 
 
-result_tree <- fread("../../data/data_RoHO/ancestral_result.csv") %>%
+result_tree <- fread("../../data_RoHO/ancestral_result.csv") %>%
   as_tibble() %>%
   mutate(mutations = ifelse(mutations == "", NA, strsplit(mutations, "\\|"))) 
   
-snp_table <- as_tibble(fread("../../data/data_RoHO/SNP_table_final_redundant.txt"))
-tree <- ape::as.phylo(treeio::read.beast("../../data/data_RoHO/annotated_tree_resis.nexus")) 
-load("../../data/data_RoHO/n_node_tips.rda")
-load("../../data/data_RoHO/n_sister_tips.rda")
+snp_table <- as_tibble(fread("../../data_RoHO/SNP_table_final_redundant.txt"))
+tree <- ape::as.phylo(treeio::read.beast("../../data_RoHO/annotated_tree_resis.nexus")) 
+load("../../data_RoHO/n_node_tips.rda")
+load("../../data_RoHO/n_sister_tips.rda")
 
 
 get_node_mutations <- function(node) {
@@ -104,25 +104,25 @@ global_RoHO_nodes <- do.call(rbind, global_RoHO_nodes)
 
 save(global_RoHO_nodes, file = "../../data/data_RoHO/global_RoHO_nodes.rda")
 
-# global_RoHO <- global_RoHO_nodes %>%
-#   na.omit() %>%
-#   group_by(mutation) %>%
-#   summarise(
-#     n_node_tips = sum(n_node_tips),
-#     n_sister_tips = sum(n_sister_tips),
-#     RoHO = n_node_tips / n_sister_tips
-#   ) %>%
-#   mutate(
-#     synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
-#     Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
-#   ) %>%
-#   select(
-#     mutation, synonym, Rv_number, n_node_tips, n_sister_tips, RoHO
-#   ) %>%
-#   ungroup()
-# 
-# global_RoHO <- global_RoHO %>%
-#   mutate(synonym = ifelse(synonym %in% c("", "-"), NA, synonym))
-# 
-# save(global_RoHO, file = "../../data/data_RoHO/global_RoHO.rda")
-# fwrite(global_RoHO, file = "../../data/data_RoHO/global_RoHO.csv")
+global_RoHO <- global_RoHO_nodes %>%
+  na.omit() %>%
+  group_by(mutation) %>%
+  summarise(
+    n_node_tips = sum(n_node_tips),
+    n_sister_tips = sum(n_sister_tips),
+    RoHO = n_node_tips / n_sister_tips
+  ) %>%
+  mutate(
+    synonym = snp_table$Synonym[match(str_sub(mutation, 1, -2), snp_table$Position)],
+    Rv_number = snp_table$Rv_number[match(str_sub(mutation, 1, -2), snp_table$Position)]
+  ) %>%
+  select(
+    mutation, synonym, Rv_number, n_node_tips, n_sister_tips, RoHO
+  ) %>%
+  ungroup()
+
+global_RoHO <- global_RoHO %>%
+  mutate(synonym = ifelse(synonym %in% c("", "-"), NA, synonym))
+
+save(global_RoHO, file = "../../data_RoHO/global_RoHO.rda")
+fwrite(global_RoHO, file = "../../data_RoHO/global_RoHO.csv")
