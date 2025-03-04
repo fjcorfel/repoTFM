@@ -2,8 +2,8 @@ library(dplyr)
 library(phangorn)
 library(phytools)
 
-load("../../data/data_RoHO/homoplasy_nodes_annotated.rda")
-tree <- ape::as.phylo(treeio::read.beast("../../data/data_RoHO/annotated_tree_resis.nexus")) 
+load("../../data_RoHO/homoplasy_nodes_annotated.rda")
+tree <- ape::as.phylo(treeio::read.beast("../../data_RoHO/annotated_tree_resis.nexus")) 
 
 rpoB_nodes <- homoplasy_nodes %>%
   filter(synonym == "rpoB") %>%
@@ -67,8 +67,8 @@ rpoC_nodes_with_rpoB <- rpoC_nodes_with_rpoB %>%
   )
 
 
-t.test(rpoC_nodes_with_rpoB$RoHO, rpoC_nodes_with_rpoB$sister_RoHO)
-wilcox.test(rpoC_nodes_with_rpoB$RoHO, rpoC_nodes_with_rpoB$sister_RoHO)
+t.test(rpoC_nodes_with_rpoB$RoHO, rpoC_nodes_with_rpoB$sister_RoHO, alternative = "greater")$p.value
+wilcox.test(rpoC_nodes_with_rpoB$RoHO, rpoC_nodes_with_rpoB$sister_RoHO, alternative = "greater")$p.value
 
 rpoB_nodes_without_rpoC <- rpoB_nodes %>%
   filter(!has_rpoC)
@@ -86,5 +86,5 @@ rpoB_nodes_without_rpoC <- rpoB_nodes_without_rpoC %>%
     sister_RoHO = n_wt_alleles / n_mut_alleles
   )
 
-t.test(rpoB_nodes_without_rpoC$RoHO, rpoB_nodes_without_rpoC$sister_RoHO)
-wilcox.test(rpoB_nodes_without_rpoC$RoHO, rpoB_nodes_without_rpoC$sister_RoHO)$p.value
+t.test(rpoB_nodes_without_rpoC$RoHO, rpoB_nodes_without_rpoC$sister_RoHO, alternative = "less")$p.value
+wilcox.test(rpoB_nodes_without_rpoC$RoHO, rpoB_nodes_without_rpoC$sister_RoHO, alternative = "less")$p.value
