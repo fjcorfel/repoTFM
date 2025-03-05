@@ -5,13 +5,9 @@ library(phangorn)
 library(parallel)
 library(stringr)
 
-
-DATASET <- "malawi"
-DATASET_SIZE <- switch (DATASET,
-  "malawi" = 1840,
-  "vietnam" = 1504
-)
-
+TOTAL_TREE_YEARS <- 4000
+YEARS_TO_ANALYZE <- 40
+DATASET <- "global"
 
 ### FUNCTIONS -----------------------------------------------------------------
 
@@ -104,32 +100,35 @@ tree <- ape::as.phylo(treeio::read.beast(paste0("../data/", DATASET, "/", "annot
 # Load annotated_tree_cleaned (mutations per node and accumulated synonym mutations)
 annotated_tree <- fread(paste0("../data/", DATASET, "/", "annotated_tree_cleaned.csv")) %>%
   as_tibble()
-  
-accumulated_mutations_root <- sapply(annotated_tree$node, function(n) {
+
+print("Calculating accumulated mutations root")
+accumulated_mutations_root <- unlist(mclapply(annotated_tree$node, function(n) {
+  print(paste("Node root", n))
   node_mutations <- get_n_synonym_mutations(n)
   ancestors <- get_ancestors(n)
   ancestors_mutations <- sum(sapply(ancestors, function(ancestor) get_n_synonym_mutations(ancestor))) 
   
   total_mutations <- node_mutations + ancestors_mutations
   return(total_mutations)
-})
+}, mc.cores = 10, mc.preschedule = FALSE))
 
-accumulated_mutations_descendants <- sapply(annotated_tree$node, function(n) {
+print("Calculating accumulated mutations descendants")
+accumulated_mutations_descendants <- unlist(mclapply(annotated_tree$node, function(n) {
+  print(paste("Node descendants", n))
   node_mutations <- get_n_synonym_mutations(n)
   descendants <- get_descendants(n)
   descendants_mutations <- sum(sapply(descendants, function(descendant) get_n_synonym_mutations(descendant))) 
   
   total_mutations <- node_mutations + descendants_mutations
   return(total_mutations)
-})
+}, mc.cores = 10, mc.preschedule = FALSE))
 
 annotated_tree$accumulated_mutations_root <- accumulated_mutations_root
 annotated_tree$accumulated_mutations_descendants <- accumulated_mutations_descendants
 
-TOTAL_TREE_YEARS <- 4000
-MUTATIONS_TOTAL_TREE_YEARS <- max(annotated_tree$accumulated_mutations_root)
-years_to_analyze <- 40
-mutations_years_to_analize <- round((years_to_analyze * MUTATIONS_TOTAL_TREE_YEARS) / TOTAL_TREE_YEARS)
+
+mutations_total_tree_years <- max(annotated_tree$accumulated_mutations_root)
+mutations_years_to_analize <- round((YEARS_TO_ANALYZE * mutations_total_tree_years) / TOTAL_TREE_YEARS)
 
 annotated_tree <- annotated_tree %>%
   filter(accumulated_mutations_descendants <= mutations_years_to_analize)
