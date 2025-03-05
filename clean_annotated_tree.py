@@ -1,5 +1,6 @@
 import pandas as pd
 
+DATASET = 'global'
 
 def translate_mutation_position(mutations: str, snp_table) -> str:
     """
@@ -24,7 +25,7 @@ def translate_mutation_position(mutations: str, snp_table) -> str:
 
 def main():
     # Load annotated tree
-    annotated_tree = pd.read_csv('../data/vietnam/annotated_tree.csv')
+    annotated_tree = pd.read_csv(f'../data/{DATASET}/annotated_tree.csv')
 
     # Drop nodes without any mutations
     annotated_tree = annotated_tree.dropna(subset=['mutations'])
@@ -37,19 +38,21 @@ def main():
     # Drop nodes with empty mutations after removing gaps
     annotated_tree = annotated_tree[annotated_tree['mutations'] != '']
 
-    # Remove mutations first nucleotide 
-    annotated_tree['mutations'] = annotated_tree['mutations'].apply(
-        lambda x: '|'.join([m[1:] for m in x.split('|')])
-    )
+    # This two steps aren't necessary for global dataset
+    if DATASET != 'global':
+        # Remove mutations first nucleotide 
+        annotated_tree['mutations'] = annotated_tree['mutations'].apply(
+            lambda x: '|'.join([m[1:] for m in x.split('|')])
+        )
 
-    # Fix mutation position -> translate alignment position into whole genome
-    snp_table = pd.read_csv('../data/vietnam/SNP_table_final.txt', sep='\t')
-    annotated_tree['mutations'] = annotated_tree['mutations'].apply(
-        lambda x: translate_mutation_position(x, snp_table)
-    )
+        # Fix mutation position -> translate alignment position into whole genome
+        snp_table = pd.read_csv(f'../data/{DATASET}/SNP_table_final.txt', sep='\t')
+        annotated_tree['mutations'] = annotated_tree['mutations'].apply(
+            lambda x: translate_mutation_position(x, snp_table)
+        )
 
     # Export results
-    annotated_tree.to_csv('../data/vietnam/annotated_tree_cleaned.csv', index=False)
+    annotated_tree.to_csv(f'../data/{DATASET}/annotated_tree_cleaned.csv', index=False)
     
     
 if __name__ == '__main__':

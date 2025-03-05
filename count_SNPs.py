@@ -1,9 +1,9 @@
 import pandas as pd
 
-DATASET =  'malawi'
+DATASET = 'global'
 
 # Load redundant SNP table for checking synonymous mutations
-snp_table = pd.read_csv('../data/SNP_table_final_redundant.txt', sep='\t')
+snp_table = pd.read_csv(f'../data/SNP_table_final_redundant.txt', sep='\t')
 # Create complete mutation column
 snp_table['mutation'] = snp_table['Position'].astype(str) + snp_table['ALT']
 position_variants = snp_table[['mutation', 'Variant_type']]
