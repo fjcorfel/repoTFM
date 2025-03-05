@@ -6,7 +6,7 @@ library(parallel)
 library(stringr)
 
 
-DATASET <- "vietnam"
+DATASET <- "malawi"
 DATASET_SIZE <- switch (DATASET,
   "malawi" = 1840,
   "vietnam" = 1504
@@ -79,21 +79,61 @@ test_branch_lengths <- function(node) {
   }
 }
 
+get_ancestors <- function(node) {
+  ancestors <- phangorn::Ancestors(tree, node)
+  return(ancestors)
+}  
+
+get_descendants <- function(node) {
+  descendants <- phangorn::Descendants(tree, node, "all")
+  return(descendants)
+}  
+
+get_n_synonym_mutations <- function(node) {
+  mutation_idx <- which(annotated_tree$node == node)
+  if (length(mutation_idx) > 0) {
+    return(annotated_tree$n_synonym_mutations[mutation_idx])
+  } else return(0)
+}
+
 ### INPUTS --------------------------------------------------------------------
 
 # Load tree (nwk)
 tree <- ape::as.phylo(treeio::read.beast(paste0("../data/", DATASET, "/", "annotated_tree.nexus"))) 
 
-# Load annotated_tree_cleaned (mutations per node)
+# Load annotated_tree_cleaned (mutations per node and accumulated synonym mutations)
 annotated_tree <- fread(paste0("../data/", DATASET, "/", "annotated_tree_cleaned.csv")) %>%
-  as_tibble() %>%
-  mutate(mutations = strsplit(mutations, '\\|')) %>%
-  rowwise() %>%
-  mutate(n_tips = calculate_n_tips(node),
-         n_sibling_tips = calculate_n_sibling_tips(node)) %>%
-  filter((n_tips >= 2 & n_tips <= (DATASET_SIZE / 10)) & 
-           (n_sibling_tips >= 2 & n_sibling_tips <= (DATASET_SIZE / 10))) %>%
-  ungroup()
+  as_tibble()
+  
+accumulated_mutations_root <- sapply(annotated_tree$node, function(n) {
+  node_mutations <- get_n_synonym_mutations(n)
+  ancestors <- get_ancestors(n)
+  ancestors_mutations <- sum(sapply(ancestors, function(ancestor) get_n_synonym_mutations(ancestor))) 
+  
+  total_mutations <- node_mutations + ancestors_mutations
+  return(total_mutations)
+})
+
+accumulated_mutations_descendants <- sapply(annotated_tree$node, function(n) {
+  node_mutations <- get_n_synonym_mutations(n)
+  descendants <- get_descendants(n)
+  descendants_mutations <- sum(sapply(descendants, function(descendant) get_n_synonym_mutations(descendant))) 
+  
+  total_mutations <- node_mutations + descendants_mutations
+  return(total_mutations)
+})
+
+annotated_tree$accumulated_mutations_root <- accumulated_mutations_root
+annotated_tree$accumulated_mutations_descendants <- accumulated_mutations_descendants
+
+TOTAL_TREE_YEARS <- 4000
+MUTATIONS_TOTAL_TREE_YEARS <- max(annotated_tree$accumulated_mutations_root)
+years_to_analyze <- 40
+mutations_years_to_analize <- round((years_to_analyze * MUTATIONS_TOTAL_TREE_YEARS) / TOTAL_TREE_YEARS)
+
+annotated_tree <- annotated_tree %>%
+  filter(accumulated_mutations_descendants <= mutations_years_to_analize)
+  
 
 # Load annotated_tree (branch length per node)
 nodes_branch_length <- fread(paste0("../data/", DATASET, "/", "annotated_tree.csv")) %>%
@@ -176,7 +216,7 @@ final_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
 
 final_nodes <- do.call(rbind, final_nodes)
 
-fwrite(final_nodes, file = paste0("../data/", DATASET, "/", "final_nodes_global_", DATASET, ".csv"))
+fwrite(final_nodes, file = paste0("../data/", DATASET, "/", "final_nodes_", DATASET, ".csv"))
 
 # Group by mutation
 final_mutations <- final_nodes %>%
@@ -195,4 +235,4 @@ final_mutations <- final_mutations %>%
   mutate(synonym = na_if(synonym, "")) %>%
   mutate(synonym = na_if(synonym, "-"))
   
-fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_global_", DATASET, ".csv"))
+fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_", DATASET, ".csv"))
