@@ -64,7 +64,8 @@ test_branch_lengths <- function(node) {
   # This block handles constant data error in t.test
   # This error happens when there is not branch length variation
   results <- tryCatch({
-      t.test(mutant_branch_lengths, wt_branch_lengths, alternative = "less")
+    
+    wilcox.test(median(mutant_branch_lengths), median(wt_branch_lengths), alternative = "less")
 
   }, error = function(e) {
     return(NA)
@@ -147,7 +148,7 @@ mutations_years_to_analize <- round((YEARS_TO_ANALYZE * mutations_total_tree_yea
 
 annotated_tree <- annotated_tree %>%
   filter(accumulated_mutations_descendants <= mutations_years_to_analize)
-  
+
 
 # Load annotated_tree (branch length per node)
 nodes_branch_length <- fread(paste0("../data/", DATASET, "/", "annotated_tree.csv")) %>%
@@ -156,7 +157,7 @@ nodes_branch_length <- fread(paste0("../data/", DATASET, "/", "annotated_tree.cs
 
 # Select mutations
 snp_count <- fread(paste0("../data/", DATASET, "/", "SNP_count.csv")) #%>%
-  #filter(count >= 5)
+#filter(count >= 5)
 mutations <- snp_count$mutation
 
 # Load SNP table for gene annotation
@@ -230,7 +231,8 @@ final_nodes <- mclapply(seq_along(mutations), function(n_mutation) {
 
 final_nodes <- do.call(rbind, final_nodes)
 
-fwrite(final_nodes, file = paste0("../data/", DATASET, "/", "final_nodes_", DATASET, "_agefilter", YEARS_TO_ANALYZE,".csv"))
+
+fwrite(final_nodes, file = paste0("../data/", DATASET, "/", "final_nodes_", DATASET, "_agefilter", YEARS_TO_ANALYZE,"_MEDIAN.csv"))
 
 
 # Group by mutation
@@ -251,8 +253,7 @@ final_mutations <- final_mutations %>%
   mutate(synonym = na_if(synonym, "-"))
 
 
-fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_", DATASET, "_agefilter",YEARS_TO_ANALYZE,".csv"))
-
+fwrite(final_mutations, file = paste0("../data/", DATASET, "/", "final_mutations_", DATASET, "_agefilter",YEARS_TO_ANALYZE,"_MEDIAN.csv"))
 
 # Group by gene
 final_genes <- final_nodes %>%
@@ -270,9 +271,10 @@ final_genes <- final_nodes %>%
   ) %>%
   ungroup()
 
- final_genes <- final_genes %>%
-   mutate(synonym = na_if(synonym, "")) %>%
-   mutate(synonym = na_if(synonym, "-"))
+final_genes <- final_genes %>%
+  mutate(synonym = na_if(synonym, "")) %>%
+  mutate(synonym = na_if(synonym, "-"))
 
-fwrite(final_genes, file = paste0("../data/", DATASET, "/", "final_genes_", DATASET, "_agefilter",YEARS_TO_ANALYZE,".csv"))
+
+fwrite(final_genes, file = paste0("../data/", DATASET, "/", "final_genes_", DATASET, "_agefilter",YEARS_TO_ANALYZE,"_MEDIAN.csv"))
 
