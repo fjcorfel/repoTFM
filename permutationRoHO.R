@@ -31,23 +31,34 @@ for (rda_file in rda_files) {
     message(paste0("Processing ", gene))
     
     observed_count <- sum(observed_top_genes$Rv_number == gene)
-    # observerd_count_normalized, valor para samplear redondeado
+
+    if (sum(global_RoHO$Rv_number == gene) < 3) {
+      return(list(pvalue = NA, observed_count = observed_count))
+    }
+    
+    
     # Perform random permutations
     random_count <- numeric(N_PERMUTATIONS)
     
     for (i in 1:N_PERMUTATIONS) {
-      permuted_df <- global_RoHO %>% mutate(Rv_number = sample(Rv_number))
+      permuted_df <- global_RoHO %>% 
+        mutate(Rv_number = sample(Rv_number))
+      
       permuted_top_genes <- permuted_df[1:N_TOP_GENES, ]
       random_count[i] <- sum(permuted_top_genes$Rv_number == gene)
     }
     
+    
+    hist(random_count)
     # Compute pvalue
     # mu debería ser entorno a 0 siempre...
     mu <- mean(random_count)
     sigma <- sd(random_count)
     pvalue <- pnorm(observed_count, mean = mu, sd = sigma, lower.tail = FALSE)
-    
+
     return(list(pvalue = pvalue, observed_count = observed_count))
+    
+    
   }
   
   set.seed(777)
@@ -73,6 +84,6 @@ for (rda_file in rda_files) {
                         tools::file_path_sans_ext(basename(rda_file)),
                         ".csv")
   
-  fwrite(final_results, paste0("../data/global/permutation_results/"), output_file)
+  fwrite(final_results, paste0("../data/global/permutation_results/", output_file))
 }
 
