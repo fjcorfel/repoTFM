@@ -6,6 +6,14 @@ library(data.table)
 N_TOP_GENES <- 100
 N_PERMUTATIONS <- 1000
 
+# SNP table for normalization of genes based on length
+snp_table <- fread("../data/SNP_table_final_redundant.txt") %>%
+  mutate(gene_length = Gene_end - Gene_start + 1) %>%
+  select(Rv_number, gene_length, synonym = Synonym) %>%
+  distinct() %>%
+  mutate(synonym = na_if(synonym, "")) %>%
+  mutate(synonym = na_if(synonym, "-"))
+
 # Load data dinamically
 load_rda_file <- function(file_path) {
   load(file_path)
@@ -13,14 +21,18 @@ load_rda_file <- function(file_path) {
 }
 
 # List of .rda files
-rda_files <- c("../data/global/global_RoHO_homoplasies_agefilter40.rda")
+rda_files <- c("../data/global/global_RoHO_homoplasies_agefilter40.rda",
+               "../data/global/global_RoHO_homoplasies_agefilter100.rda",
+               "../data/global/global_RoHO_agefilter40.rda",
+               "../data/global/global_RoHO_agefilter100.rda")
 
 for (rda_file in rda_files) {
   message(paste("Processing file:", rda_file))
    
-  global_RoHO <- load_rda_file(rda_file)
+  global_RoHO <- load_rda_file(rda_file) %>%
+    left_join(snp_table, by=c("Rv_number", "synonym"), relationship = "many-to-many")
   
-  global_RoHO <- global_RoHO %>% arrange(desc(RoHO))
+  global_RoHO <- global_RoHO %>% arrange(desc(RoHO)) 
   
   observed_top_genes <- global_RoHO[1:N_TOP_GENES, ]
   
@@ -30,9 +42,14 @@ for (rda_file in rda_files) {
   process_gene <- function(gene) {
     message(paste0("Processing ", gene))
     
+    gene_length <- observed_top_genes %>% 
+      filter(Rv_number == gene) %>% 
+      pull(gene_length) %>% 
+      first()
+    
     observed_count <- sum(observed_top_genes$Rv_number == gene)
 
-    if (sum(global_RoHO$Rv_number == gene) < 3) {
+    if (sum(global_RoHO$Rv_number == gene) < 2 || is.na(gene_length)) {
       return(list(pvalue = NA, observed_count = observed_count))
     }
     
@@ -45,16 +62,16 @@ for (rda_file in rda_files) {
         mutate(Rv_number = sample(Rv_number))
       
       permuted_top_genes <- permuted_df[1:N_TOP_GENES, ]
-      random_count[i] <- sum(permuted_top_genes$Rv_number == gene)
+      random_count[i] <- sum(permuted_top_genes$Rv_number == gene) / gene_length
     }
     
-    
-    hist(random_count)
     # Compute pvalue
-    # mu debería ser entorno a 0 siempre...
     mu <- mean(random_count)
     sigma <- sd(random_count)
-    pvalue <- pnorm(observed_count, mean = mu, sd = sigma, lower.tail = FALSE)
+    pvalue <- pnorm(observed_count / gene_length,
+                    mean = mu,
+                    sd = sigma,
+                    lower.tail = FALSE)
 
     return(list(pvalue = pvalue, observed_count = observed_count))
     
@@ -80,7 +97,7 @@ for (rda_file in rda_files) {
     mutate(adj_pvalue_BH = p.adjust(pvalue, method = "BH")) %>%
     select(Rv_number, synonym, pvalue, adj_pvalue_BH, observed_top_count)
   
-  output_file <- paste0("permutation_results",
+  output_file <- paste0("permutation_results_",
                         tools::file_path_sans_ext(basename(rda_file)),
                         ".csv")
   
