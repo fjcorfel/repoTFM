@@ -16,15 +16,15 @@ snp_table <- fread("../data/SNP_table_final_redundant.txt") %>%
 
 # Load data dinamically
 load_rda_file <- function(file_path) {
-  load(file_path)
+  global_RoHO <- fread(file_path)
   return(global_RoHO)
 }
 
 # List of .rda files
-rda_files <- c("../data/global/global_RoHO_homoplasies_agefilter40.rda",
-               "../data/global/global_RoHO_homoplasies_agefilter100.rda",
-               "../data/global/global_RoHO_agefilter40.rda",
-               "../data/global/global_RoHO_agefilter100.rda")
+rda_files <- c("../data/global/global_RoHO_homoplasies_agefilter40_phoR_renamed.csv",
+               "../data/global/global_RoHO_homoplasies_agefilter100_phoR_renamed.csv",
+               "../data/global/global_RoHO_agefilter40_phoR_renamed.csv",
+               "../data/global/global_RoHO_agefilter100_phoR_renamed.csv")
 
 for (rda_file in rda_files) {
   message(paste("Processing file:", rda_file))
@@ -42,10 +42,16 @@ for (rda_file in rda_files) {
   process_gene <- function(gene) {
     message(paste0("Processing ", gene))
     
-    gene_length <- observed_top_genes %>% 
-      filter(Rv_number == gene) %>% 
-      pull(gene_length) %>% 
-      first()
+    if (gene == "Rv0758_EXT" || gene == "Rv0758_INT") {
+      gene_length <- 1458
+    } else {
+      gene_length <- observed_top_genes %>% 
+        filter(Rv_number == gene) %>% 
+        pull(gene_length) %>% 
+        first()
+    }
+    
+    
     
     observed_count <- sum(observed_top_genes$Rv_number == gene)
 
