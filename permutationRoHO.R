@@ -9,14 +9,14 @@ N_PERMUTATIONS <- 1000
 # SNP table for normalization of genes based on length
 snp_table <- fread("../data/SNP_table_final_redundant.txt") %>%
   mutate(gene_length = Gene_end - Gene_start + 1) %>%
-  select(Rv_number, gene_length, synonym = Synonym) %>%
-  distinct() %>%
-  mutate(synonym = na_if(synonym, "")) %>%
-  mutate(synonym = na_if(synonym, "-"))
+  select(Rv_number, gene_length) %>%
+  distinct(Rv_number, .keep_all = TRUE)
 
 # Load data dinamically
 load_rda_file <- function(file_path) {
-  global_RoHO <- fread(file_path)
+  global_RoHO <- fread(file_path) %>%
+    mutate(synonym = na_if(synonym, ""))
+  
   return(global_RoHO)
 }
 
@@ -30,7 +30,7 @@ for (rda_file in rda_files) {
   message(paste("Processing file:", rda_file))
    
   global_RoHO <- load_rda_file(rda_file) %>%
-    left_join(snp_table, by=c("Rv_number", "synonym"), relationship = "many-to-many")
+    left_join(snp_table, by=c("Rv_number"), relationship = "many-to-one")
   
   global_RoHO <- global_RoHO %>% arrange(desc(RoHO)) 
   
@@ -44,6 +44,7 @@ for (rda_file in rda_files) {
     
     if (gene == "Rv0758_EXT" || gene == "Rv0758_INT") {
       gene_length <- 1458
+      
     } else {
       gene_length <- observed_top_genes %>% 
         filter(Rv_number == gene) %>% 
