@@ -37,7 +37,11 @@ files <- c("../data/global/global_RoHO_homoplasies_agefilter40_phoR_renamed.csv"
 ORA_results <- list()
 
 for (i in seq_along(files)) {
-  data <- fread(files[i])
+  data <- fread(files[i]) %>%
+    arrange(desc(RoHO)) %>%
+    head(500) %>%
+    filter(RoHO > 2)
+    
   
   gene_list <- unique(data$Rv_number)
   
