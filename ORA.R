@@ -3,6 +3,7 @@ library(clusterProfiler)
 library(tidyverse)
 library(GO.db)
 library(AnnotationDbi)
+library(stringr)
 
 # Load gff file
 gff <- fread("../data/Mycobacterium_tuberculosis_H37Rv_gff_v5.gff") %>%
@@ -51,4 +52,5 @@ for (i in seq_along(files)) {
                                            pvalueCutoff = 0.05)
 }
 
-dotplot(ORA_results[[4]])
+
+save(ORA_results, file = "../data/global/ORA_results.rda")
